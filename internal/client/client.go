@@ -12,7 +12,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -87,6 +87,19 @@ func (h Header) TakeOrSelf(ctx context.Context, v types.Map) Header {
 		return h
 	}
 	nh := Header{}
+	for k, v := range v.Elements() {
+		nh[k] = v.(types.String).ValueString()
+	}
+	return nh
+}
+
+// MergeOrSelf merges the entries from v into h without dropping existing keys.
+// Keys in v override keys in h. If v is empty/null, h is returned unchanged.
+func (h Header) MergeOrSelf(ctx context.Context, v types.Map) Header {
+	if len(v.Elements()) == 0 {
+		return h
+	}
+	nh := h.Clone()
 	for k, v := range v.Elements() {
 		nh[k] = v.(types.String).ValueString()
 	}

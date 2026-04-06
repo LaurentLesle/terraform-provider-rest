@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/defaults"
-	myvalidator "github.com/magodo/terraform-provider-restful/internal/validator"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
+	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 )
 
 type DataSource struct {
@@ -145,8 +145,8 @@ func dataSourcePrecheckAttribute(s string, pathIsRequired bool, suffixDesc strin
 
 func (d *DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "`restful_resource` data source can be used to retrieve the model of a restful resource by ID.",
-		MarkdownDescription: "`restful_resource` data source can be used to retrieve the model of a restful resource by ID.",
+		Description:         "`rest_resource` data source can be used to retrieve the model of a rest resource by ID.",
+		MarkdownDescription: "`rest_resource` data source can be used to retrieve the model of a rest resource by ID.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:         "The ID of the Resource, i.e. The path of the data source, relative to the `base_url` of the provider.",
@@ -396,7 +396,7 @@ func (d *DataSource) RenderOption() tffwdocs.DataSourceRenderOption {
 		Examples: []tffwdocs.Example{
 			{
 				HCL: `
-data "restful_resource" "test" {
+data "rest_resource" "test" {
   id = "/posts/1"
 }
 `,

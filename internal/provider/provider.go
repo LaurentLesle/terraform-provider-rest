@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -26,19 +27,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
+	"github.com/laurentlesle/terraform-provider-rest/internal/functions"
+	"github.com/laurentlesle/terraform-provider-rest/internal/resources"
+	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/defaults"
-	myvalidator "github.com/magodo/terraform-provider-restful/internal/validator"
 )
 
 var _ provider.Provider = &Provider{}
+var _ provider.ProviderWithFunctions = &Provider{}
 var _ tffwdocs.ProviderWithRenderOption = &Provider{}
 
 type Provider struct {
-	client *client.Client
-	apiOpt apiOption
-	once   sync.Once
+	client    *client.Client
+	apiOpt    apiOption
+	once      sync.Once
+	refConfig *RefConfig // ref-resolver tokens, populated by Configure
+}
+
+// RefConfig holds tokens for validate_externals and related functions.
+type RefConfig struct {
+	ARMToken        string
+	ARMTenantTokens map[string]string
+	GraphToken      string
+	GitHubToken     string
+	FailOnWarning   bool
 }
 
 type providerData struct {
@@ -56,6 +70,12 @@ type providerConfig struct {
 	MergePatchDisabled types.Bool   `tfsdk:"merge_patch_disabled"`
 	Query              types.Map    `tfsdk:"query"`
 	Header             types.Map    `tfsdk:"header"`
+	// Ref-resolver config
+	ARMToken        types.String `tfsdk:"arm_token"`
+	ARMTenantTokens types.Map    `tfsdk:"arm_tenant_tokens"`
+	GraphToken      types.String `tfsdk:"graph_token"`
+	GitHubToken     types.String `tfsdk:"github_token"`
+	FailOnWarning   types.Bool   `tfsdk:"fail_on_warning"`
 }
 
 type clientData struct {
@@ -151,14 +171,15 @@ func New() provider.Provider {
 }
 
 func (*Provider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "restful"
+	resp.TypeName = "rest"
 }
 
-func (*Provider) DataSources(context.Context) []func() datasource.DataSource {
+func (p *Provider) DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		func() datasource.DataSource {
 			return &DataSource{}
 		},
+		NewValidateExternalsDataSource(p),
 	}
 }
 
@@ -170,6 +191,8 @@ func (*Provider) Resources(context.Context) []func() resource.Resource {
 		func() resource.Resource {
 			return &OperationResource{}
 		},
+		resources.NewHelmReleaseResource,
+		resources.NewK8sTokenResource,
 	}
 }
 
@@ -197,15 +220,40 @@ func (*Provider) Actions(_ context.Context) []func() action.Action {
 	}
 }
 
+func (p *Provider) Functions(_ context.Context) []func() function.Function {
+	return []func() function.Function{
+		functions.NewResolveFunction,
+		functions.NewResolveMapFunction,
+		functions.NewMergeWithOutputsFunction,
+		func() function.Function {
+			return functions.NewValidateExternalsWithConfig(p)
+		},
+	}
+}
+
+// GetTokens satisfies functions.ConfigProvider, bridging provider config to functions.
+func (p *Provider) GetTokens() *functions.ProviderTokens {
+	if p.refConfig == nil {
+		return nil
+	}
+	return &functions.ProviderTokens{
+		ARMToken:        p.refConfig.ARMToken,
+		ARMTenantTokens: p.refConfig.ARMTenantTokens,
+		GraphToken:      p.refConfig.GraphToken,
+		GitHubToken:     p.refConfig.GitHubToken,
+		FailOnWarning:   p.refConfig.FailOnWarning,
+	}
+}
+
 func (*Provider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "The restful provider provides resource and data source to interact with a platform that exposes a restful API.",
-		MarkdownDescription: "The restful provider provides resource and data source to interact with a platform that exposes a restful API.",
+		Description:         "The rest provider provides resource and data source to interact with a platform that exposes a RESTful API.",
+		MarkdownDescription: "The rest provider provides resource and data source to interact with a platform that exposes a RESTful API.",
 		Attributes: map[string]schema.Attribute{
 			"base_url": schema.StringAttribute{
 				Description:         "The base URL of the API provider.",
 				MarkdownDescription: "The base URL of the API provider.",
-				Required:            true,
+				Optional:            true,
 				Validators: []validator.String{
 					myvalidator.StringIsParsable("Ensure this is a valid HTTP URL.", func(s string) error {
 						_, err := url.Parse(s)
@@ -664,6 +712,32 @@ func (*Provider) Schema(ctx context.Context, req provider.SchemaRequest, resp *p
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
+			// ── Ref-resolver attributes (for functions and validate_externals) ──
+			"arm_token": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Bearer token for Azure Resource Manager. Used by validate_externals to verify azure_* external references.",
+			},
+			"arm_tenant_tokens": schema.MapAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				ElementType: types.StringType,
+				Description: "Map of tenant_id → ARM bearer token for cross-tenant access.",
+			},
+			"graph_token": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Bearer token for Microsoft Graph. Used by validate_externals to verify entraid_* external references.",
+			},
+			"github_token": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "GitHub token for the GitHub API. Used by validate_externals to verify github_* external references.",
+			},
+			"fail_on_warning": schema.BoolAttribute{
+				Optional:    true,
+				Description: "When true, validate_externals raises an error if any API validation produces a warning. Defaults to false.",
+			},
 		},
 	}
 }
@@ -678,6 +752,30 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		return
 	}
 
+	// Populate ref-resolver config for functions and validate_externals
+	data.provider.refConfig = &RefConfig{}
+	cfg := data.config
+	if !cfg.ARMToken.IsNull() && !cfg.ARMToken.IsUnknown() {
+		data.provider.refConfig.ARMToken = cfg.ARMToken.ValueString()
+	}
+	if !cfg.ARMTenantTokens.IsNull() && !cfg.ARMTenantTokens.IsUnknown() {
+		data.provider.refConfig.ARMTenantTokens = make(map[string]string)
+		for k, v := range cfg.ARMTenantTokens.Elements() {
+			if sv, ok := v.(types.String); ok && !sv.IsNull() {
+				data.provider.refConfig.ARMTenantTokens[k] = sv.ValueString()
+			}
+		}
+	}
+	if !cfg.GraphToken.IsNull() && !cfg.GraphToken.IsUnknown() {
+		data.provider.refConfig.GraphToken = cfg.GraphToken.ValueString()
+	}
+	if !cfg.GitHubToken.IsNull() && !cfg.GitHubToken.IsUnknown() {
+		data.provider.refConfig.GitHubToken = cfg.GitHubToken.ValueString()
+	}
+	if !cfg.FailOnWarning.IsNull() && !cfg.FailOnWarning.IsUnknown() {
+		data.provider.refConfig.FailOnWarning = cfg.FailOnWarning.ValueBool()
+	}
+
 	resp.ResourceData = data
 	resp.DataSourceData = data
 	resp.EphemeralResourceData = data
@@ -688,6 +786,11 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) Init(ctx context.Context, config providerConfig) diag.Diagnostics {
 	var odiags diag.Diagnostics
 	p.once.Do(func() {
+		// When used purely for functions (no base_url), skip client init.
+		if config.BaseURL.IsNull() || config.BaseURL.IsUnknown() {
+			return
+		}
+		client.DebugLog("[DEBUG] Provider.Init: base_url=%s security_is_null=%v", config.BaseURL.ValueString(), config.Security.IsNull())
 		clientOpt := &client.BuildOption{}
 		if cRaw := config.Client; !cRaw.IsNull() {
 			var c clientData
@@ -1084,7 +1187,7 @@ func (p *Provider) RenderOption() tffwdocs.ProviderRenderOption {
 			{
 				Header: "No Authentication",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "http://localhost:3000"
   securty  = {} # optional
 }
@@ -1093,7 +1196,7 @@ provider "restful" {
 			{
 				Header: "HTTP Basic",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "http://localhost:3000"
   security = {
     http = {
@@ -1109,7 +1212,7 @@ provider "restful" {
 			{
 				Header: "HTTP Token",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "http://localhost:3000"
   security = {
     http = {
@@ -1124,7 +1227,7 @@ provider "restful" {
 			{
 				Header: "API Key",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "http://localhost:3000"
   security = {
     apikey = [
@@ -1141,7 +1244,7 @@ provider "restful" {
 			{
 				Header: "OAuth2 Client Credential",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "https://management.azure.com"
   security = {
     oauth2 = {
@@ -1159,7 +1262,7 @@ provider "restful" {
 			{
 				Header: "OAuth2 Password",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = var.base_url
   security = {
     oauth2 = {
@@ -1176,7 +1279,7 @@ provider "restful" {
 			{
 				Header: "OAuth2 Refresh Token",
 				HCL: `
-provider "restful" {
+provider "rest" {
   base_url = "https://management.azure.com"
   security = {
     oauth2 = {

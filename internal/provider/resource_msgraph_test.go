@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
 )
 
 const RESTFUL_MSGRAPH_TENANT_ID = "RESTFUL_MSGRAPH_TENANT_ID"
@@ -60,7 +60,7 @@ func newMsGraphData() msgraphData {
 }
 
 func TestResource_MsGraph_User(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newMsGraphData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -140,7 +140,7 @@ func (d msgraphData) CheckDestroy(addr string) func(*terraform.State) error {
 
 func (d msgraphData) user(mpDisabled bool) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -155,7 +155,7 @@ provider "restful" {
   update_method = "PATCH"
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/users"
   read_path = "$(path)/$(body.id)"
   merge_patch_disabled 	= %t
@@ -180,7 +180,7 @@ resource "restful_resource" "test" {
 
 func (d msgraphData) userUpdate(mpDisabled bool) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -195,7 +195,7 @@ provider "restful" {
   update_method = "PATCH"
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/users"
   read_path = "$(path)/$(body.id)"
   merge_patch_disabled 	= %t

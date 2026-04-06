@@ -209,6 +209,12 @@ PollingLoop:
 
 		status, ok := f.StatusLocator.LocateValueInResp(*resp)
 		if !ok {
+			// When the status field doesn't exist yet (e.g. K8s Job status.succeeded
+			// before completion), treat as pending if pending states are defined.
+			if len(f.Status.Pending) > 0 {
+				time.Sleep(f.DefaultDelay)
+				continue PollingLoop
+			}
 			return fmt.Errorf("No status value found from %s", f.StatusLocator)
 		}
 		// We tolerate case difference here to be pragmatic.

@@ -9,12 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 )
 
 func TestDataSource_JSONServer_Basic(t *testing.T) {
-	addr := "restful_resource.test"
-	dsaddr := "data.restful_resource.test"
+	addr := "rest_resource.test"
+	dsaddr := "data.rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -32,8 +32,8 @@ func TestDataSource_JSONServer_Basic(t *testing.T) {
 }
 
 func TestDataSource_JSONServer_WithSelector(t *testing.T) {
-	addr := "restful_resource.test"
-	dsaddr := "data.restful_resource.test"
+	addr := "rest_resource.test"
+	dsaddr := "data.rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -51,8 +51,8 @@ func TestDataSource_JSONServer_WithSelector(t *testing.T) {
 }
 
 func TestDataSource_JSONServer_WithOutputAttrs(t *testing.T) {
-	addr := "restful_resource.test"
-	dsaddr := "data.restful_resource.test"
+	addr := "rest_resource.test"
+	dsaddr := "data.rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -71,7 +71,7 @@ func TestDataSource_JSONServer_WithOutputAttrs(t *testing.T) {
 }
 
 func TestDataSource_JSONServer_NotExists(t *testing.T) {
-	dsaddr := "data.restful_resource.test"
+	dsaddr := "data.rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -90,11 +90,11 @@ func TestDataSource_JSONServer_NotExists(t *testing.T) {
 
 func (d jsonServerData) dsBasic() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/posts"
   body = {
   	foo = "bar"
@@ -102,8 +102,8 @@ resource "restful_resource" "test" {
   read_path = "$(path)/$(body.id)"
 }
 
-data "restful_resource" "test" {
-  id = restful_resource.test.id
+data "rest_resource" "test" {
+  id = rest_resource.test.id
 }
 `, d.url)
 
@@ -111,11 +111,11 @@ data "restful_resource" "test" {
 
 func (d jsonServerData) dsWithSelector() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/posts"
   body = {
   	foo = "bar"
@@ -123,10 +123,10 @@ resource "restful_resource" "test" {
   read_path = "$(path)/$(body.id)"
 }
 
-data "restful_resource" "test" {
+data "rest_resource" "test" {
   id       = "/posts"
   selector = "#(foo==\"bar\")"
-  depends_on = [restful_resource.test]
+  depends_on = [rest_resource.test]
 }
 `, d.url)
 
@@ -134,11 +134,11 @@ data "restful_resource" "test" {
 
 func (d jsonServerData) dsWithOutputAttrs() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/posts"
   body = {
   	foo = "bar"
@@ -150,8 +150,8 @@ resource "restful_resource" "test" {
   read_path = "$(path)/$(body.id)"
 }
 
-data "restful_resource" "test" {
-  id = restful_resource.test.id
+data "rest_resource" "test" {
+  id = rest_resource.test.id
   output_attrs = ["foo", "obj.a"]
 }
 `, d.url)
@@ -160,11 +160,11 @@ data "restful_resource" "test" {
 
 func (d jsonServerData) dsNotExist() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-data "restful_resource" "test" {
+data "rest_resource" "test" {
   id = "/notexist"
   allow_not_exist = true
 }
@@ -173,7 +173,7 @@ data "restful_resource" "test" {
 }
 
 func TestDataSource_JSONServer_UseSensitiveOutput(t *testing.T) {
-	dsaddr := "data.restful_resource.test"
+	dsaddr := "data.rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -193,11 +193,11 @@ func TestDataSource_JSONServer_UseSensitiveOutput(t *testing.T) {
 
 func (d jsonServerData) dsUseSensitiveOutput() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/posts"
   body = {
   	foo = "bar"
@@ -205,8 +205,8 @@ resource "restful_resource" "test" {
   read_path = "$(path)/$(body.id)"
 }
 
-data "restful_resource" "test" {
-  id = restful_resource.test.id
+data "rest_resource" "test" {
+  id = rest_resource.test.id
   use_sensitive_output = true
 }
 `, d.url)

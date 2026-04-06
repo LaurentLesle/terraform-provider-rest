@@ -17,10 +17,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
 	"github.com/magodo/terraform-plugin-framework-helper/ephemeral"
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/defaults"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
-	myvalidator "github.com/magodo/terraform-provider-restful/internal/validator"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 )
 
 type Action struct {
@@ -30,12 +30,13 @@ type Action struct {
 var _ action.Action = &Action{}
 
 type actionData struct {
-	Path          types.String  `tfsdk:"path"`
-	Query         types.Map     `tfsdk:"query"`
-	Header        types.Map     `tfsdk:"header"`
-	Method        types.String  `tfsdk:"method"`
-	Body          types.Dynamic `tfsdk:"body"`
-	EphemeralBody types.Dynamic `tfsdk:"ephemeral_body"`
+	Path            types.String  `tfsdk:"path"`
+	Query           types.Map     `tfsdk:"query"`
+	Header          types.Map     `tfsdk:"header"`
+	EphemeralHeader types.Map     `tfsdk:"ephemeral_header"`
+	Method          types.String  `tfsdk:"method"`
+	Body            types.Dynamic `tfsdk:"body"`
+	EphemeralBody   types.Dynamic `tfsdk:"ephemeral_body"`
 
 	Precheck types.List   `tfsdk:"precheck"`
 	Poll     types.Object `tfsdk:"poll"`
@@ -152,7 +153,7 @@ func actionPrecheckAttribute(s string, pathIsRequired bool, suffixDesc string, s
 
 func (a *Action) Schema(ctx context.Context, req action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "`restful_action` represents an ad-hoc API call action.",
+		MarkdownDescription: "`rest_action` represents an ad-hoc API call action.",
 		Attributes: map[string]schema.Attribute{
 			"path": schema.StringAttribute{
 				MarkdownDescription: "The path for the `Invoke` call, relative to the `base_url` of the provider.",
@@ -167,6 +168,13 @@ func (a *Action) Schema(ctx context.Context, req action.SchemaRequest, resp *act
 				MarkdownDescription: "The header parameters for the `Invoke` call. This overrides the `header` set in the provider block.",
 				ElementType:         types.StringType,
 				Optional:            true,
+			},
+			"ephemeral_header": schema.MapAttribute{
+				Description:         "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
+				MarkdownDescription: "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
+				ElementType:         types.StringType,
+				Optional:            true,
+				WriteOnly:           true,
 			},
 			"method": schema.StringAttribute{
 				MarkdownDescription: "The HTTP method for the `Invoke` call.",
@@ -314,7 +322,7 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 
 	tflog.Info(ctx, "Invoking an action", map[string]any{"path": config.Path.ValueString()})
 
-	opt, diags := a.p.apiOpt.ForOperation(ctx, config.Method, config.Query, config.Header, types.MapNull(types.StringType), types.MapNull(types.StringType), nil)
+	opt, diags := a.p.apiOpt.ForOperation(ctx, config.Method, config.Query, config.Header, config.EphemeralHeader, types.MapNull(types.StringType), types.MapNull(types.StringType), nil)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
 )
 
 func validateLocator(locator string) error {

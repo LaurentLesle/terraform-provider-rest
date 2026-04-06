@@ -5,7 +5,7 @@ import (
 	"log"
 
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
-	"github.com/magodo/terraform-provider-restful/internal/provider"
+	"github.com/laurentlesle/terraform-provider-rest/internal/provider"
 )
 
 func main() {

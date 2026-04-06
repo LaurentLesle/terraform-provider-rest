@@ -3,7 +3,7 @@ package exparam_test
 import (
 	"testing"
 
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
 	"github.com/stretchr/testify/require"
 )
 

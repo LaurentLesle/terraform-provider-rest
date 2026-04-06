@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,7 +47,7 @@ func TestDataSourceMTLS(t *testing.T) {
 
 func mtlsConfig(url string, caCert, clientCert, clientKey []byte) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   client = {
 	root_ca_certificates = [%q]
@@ -59,7 +59,7 @@ provider "restful" {
     ]
   }
 }
-data "restful_resource" "test" {
+data "rest_resource" "test" {
   id = "/"
 }
 `, url, caCert, clientCert, clientKey)

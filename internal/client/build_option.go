@@ -3,7 +3,17 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -175,7 +185,22 @@ type OAuth2RefreshTokenOption struct {
 	Scopes       []string
 }
 
+func DebugLog(format string, args ...interface{}) {
+	if os.Getenv("RESTFUL_DEBUG") == "" {
+		return
+	}
+	f, err := os.OpenFile("/tmp/rest-debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf(format, args...)
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, format+"\n", args...)
+}
+
 func (opt OAuth2RefreshTokenOption) configureClient(_ context.Context, client *resty.Client) error {
+	DebugLog("[DEBUG] OAuth2RefreshTokenOption.configureClient: tokenURL=%s clientID=%s scopes=%v", opt.TokenURL, opt.ClientId, opt.Scopes)
+
 	cfg := oauth2.Config{
 		ClientID:     opt.ClientId,
 		ClientSecret: opt.ClientSecret,
@@ -196,10 +221,143 @@ func (opt OAuth2RefreshTokenOption) configureClient(_ context.Context, client *r
 	// Especially, when we use this client, we will set the operation bound context for each request.
 	httpClient := client.GetClient()
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	*client = *resty.NewWithClient(cfg.Client(ctx, &oauth2.Token{
-		RefreshToken: opt.RefreshToken,
-		TokenType:    opt.TokenType,
-		Expiry:       time.Now(),
-	}))
+
+	// Use a custom token source that includes scopes in the refresh request.
+	// The standard oauth2.tokenRefresher does not send scopes during refresh,
+	// which causes Azure AD to return tokens with the wrong audience.
+	ts := &scopedRefreshTokenSource{
+		ctx:          ctx,
+		conf:         &cfg,
+		refreshToken: opt.RefreshToken,
+		tokenType:    opt.TokenType,
+	}
+	*client = *resty.NewWithClient(oauth2.NewClient(ctx, oauth2.ReuseTokenSource(nil, ts)))
 	return nil
+}
+
+// scopedRefreshTokenSource is a TokenSource that includes scopes in the
+// refresh token request. The standard oauth2.tokenRefresher omits scopes,
+// which causes Azure AD to return tokens for the wrong audience when using
+// a multi-resource refresh token (e.g. from the Azure CLI).
+type scopedRefreshTokenSource struct {
+	ctx          context.Context
+	conf         *oauth2.Config
+	refreshToken string
+	tokenType    string
+	mu           sync.Mutex
+}
+
+func (s *scopedRefreshTokenSource) Token() (*oauth2.Token, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.refreshToken == "" {
+		return nil, errors.New("oauth2: token expired and refresh token is not set")
+	}
+
+	v := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {s.refreshToken},
+		"client_id":     {s.conf.ClientID},
+	}
+	if s.conf.ClientSecret != "" {
+		v.Set("client_secret", s.conf.ClientSecret)
+	}
+	if len(s.conf.Scopes) > 0 {
+		v.Set("scope", strings.Join(s.conf.Scopes, " "))
+	}
+
+	DebugLog("[DEBUG] scopedRefreshTokenSource: requesting token from %s with scope=%s", s.conf.Endpoint.TokenURL, v.Get("scope"))
+
+	tk, err := retrieveTokenWithScopes(s.ctx, s.conf.Endpoint.TokenURL, v)
+	if err != nil {
+		DebugLog("[DEBUG] scopedRefreshTokenSource: error: %v", err)
+		return nil, err
+	}
+
+	// Decode the access token to check audience (JWT is base64 header.payload.sig)
+	parts := strings.SplitN(tk.AccessToken, ".", 3)
+	if len(parts) >= 2 {
+		// Pad base64 if needed
+		payload := parts[1]
+		switch len(payload) % 4 {
+		case 2:
+			payload += "=="
+		case 3:
+			payload += "="
+		}
+		decoded, err2 := base64.StdEncoding.DecodeString(payload)
+		if err2 == nil {
+			var claims map[string]interface{}
+			if json.Unmarshal(decoded, &claims) == nil {
+				DebugLog("[DEBUG] scopedRefreshTokenSource: token aud=%v", claims["aud"])
+			}
+		}
+	}
+
+	DebugLog("[DEBUG] scopedRefreshTokenSource: got token type=%s expires=%v", tk.TokenType, tk.Expiry)
+
+	// Update refresh token if the server rotated it
+	if tk.RefreshToken != "" && tk.RefreshToken != s.refreshToken {
+		s.refreshToken = tk.RefreshToken
+	}
+
+	if s.tokenType != "" {
+		tk.TokenType = s.tokenType
+	}
+
+	return tk, nil
+}
+
+// retrieveTokenWithScopes performs an OAuth2 token request that includes the
+// scope parameter. This is needed because Go's oauth2.tokenRefresher omits
+// scopes during refresh, which causes Azure AD to return tokens with the
+// wrong audience when using multi-resource refresh tokens.
+func retrieveTokenWithScopes(ctx context.Context, tokenURL string, v url.Values) (*oauth2.Token, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(v.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := http.DefaultClient
+	if c, ok := ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
+		httpClient = c
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("oauth2: token request returned %d: %s", resp.StatusCode, body)
+	}
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+	}
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return nil, fmt.Errorf("oauth2: failed to parse token response: %w", err)
+	}
+
+	tk := &oauth2.Token{
+		AccessToken:  tokenResp.AccessToken,
+		TokenType:    tokenResp.TokenType,
+		RefreshToken: tokenResp.RefreshToken,
+	}
+	if tokenResp.ExpiresIn > 0 {
+		tk.Expiry = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	}
+
+	return tk, nil
 }

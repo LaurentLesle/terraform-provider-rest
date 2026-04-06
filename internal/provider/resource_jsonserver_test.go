@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
 )
 
 const RESTFUL_JSON_SERVER_URL = "RESTFUL_JSON_SERVER_URL"
@@ -46,7 +46,7 @@ func newJsonServerData() jsonServerData {
 }
 
 func TestResource_JSONServer_Basic(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -116,7 +116,7 @@ func TestResource_JSONServer_Basic(t *testing.T) {
 }
 
 func TestResource_JSONServer_PatchUpdate(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -158,7 +158,7 @@ func TestResource_JSONServer_PatchUpdate(t *testing.T) {
 }
 
 func TestResource_JSONServer_FullPath(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -200,7 +200,7 @@ func TestResource_JSONServer_FullPath(t *testing.T) {
 }
 
 func TestResource_JSONServer_OutputAttrs(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -218,7 +218,7 @@ func TestResource_JSONServer_OutputAttrs(t *testing.T) {
 }
 
 func TestResource_JSONServer_ReadSelectorParam(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -256,7 +256,7 @@ func TestResource_JSONServer_ReadSelectorParam(t *testing.T) {
 }
 
 func TestResource_JSONServer_StatusLocatorParam(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -274,7 +274,7 @@ func TestResource_JSONServer_StatusLocatorParam(t *testing.T) {
 }
 
 func TestResource_JSONServer_UpdateBodyPatch(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -337,7 +337,7 @@ func TestResource_JSONServer_EphemeralBodyOverlap(t *testing.T) {
 }
 
 func TestResource_JSONServer_EphemeralBody(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -418,7 +418,7 @@ func TestResource_JSONServer_EphemeralBody(t *testing.T) {
 }
 
 func TestResource_JSONServer_MigrateV0ToV1(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { d.precheckMigrate(t) },
@@ -427,9 +427,9 @@ func TestResource_JSONServer_MigrateV0ToV1(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: nil,
 				ExternalProviders: map[string]resource.ExternalProvider{
-					"restful": {
+					"rest": {
 						VersionConstraint: "= 0.13.2",
-						Source:            "registry.terraform.io/magodo/restful",
+						Source:            "registry.terraform.io/laurentlesle/rest",
 					},
 				},
 				Config: d.migrate_v0(),
@@ -497,11 +497,11 @@ func (d jsonServerData) CheckDestroyWithReadSelector(addr string) func(*terrafor
 
 func (d jsonServerData) basic(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = %q
@@ -513,11 +513,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) patch(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   update_method = "PATCH"
@@ -530,11 +530,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) fullPath(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   update_path = "$(path)/$(body.id)"
@@ -549,11 +549,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) outputAttrs() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "bar"
@@ -570,11 +570,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) migrate_v0() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = jsonencode({
   	foo = "bar"
@@ -586,11 +586,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) migrate_v1() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "bar"
@@ -602,11 +602,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) readSelectorParam(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "%s"
@@ -620,11 +620,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) statusLocatorParam(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %[1]q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   body = {
@@ -669,11 +669,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) updateBodyPatchBase() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "bar"
@@ -684,11 +684,11 @@ resource "restful_resource" "test" {
 }
 func (d jsonServerData) updateBodyPatchUpdate() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "bar"
@@ -717,11 +717,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) updateBodyPatchUpdate2() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
     foo = "bar"
@@ -744,11 +744,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) ephemeralBodyOverlap() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "foo"
@@ -762,7 +762,7 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) ephemeralBody(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
@@ -772,7 +772,7 @@ variable "v" {
   default = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   body = {
@@ -787,11 +787,11 @@ resource "restful_resource" "test" {
 
 func (d jsonServerData) ephemeralBodyNull() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   body = {
@@ -803,7 +803,7 @@ resource "restful_resource" "test" {
 }
 
 func TestResource_JSONServer_UseSensitiveOutput(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newJsonServerData()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -832,11 +832,11 @@ func TestResource_JSONServer_UseSensitiveOutput(t *testing.T) {
 
 func (d jsonServerData) useSensitiveOutput(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   read_path = "$(path)/$(body.id)"
   use_sensitive_output = true

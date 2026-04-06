@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 )
 
 type codeServerOperation struct {
@@ -28,7 +28,7 @@ func TestOperation_CodeServer_Empty(t *testing.T) {
 		return
 	}))
 
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newCodeServerOperation(srv.URL)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: acceptance.ProviderFactory(),
@@ -72,7 +72,7 @@ func TestOperation_CodeServer_idBuilder(t *testing.T) {
 }
 
 func TestOperation_CodeServer_HeaderQuery(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -110,7 +110,7 @@ func TestOperation_CodeServer_HeaderQuery(t *testing.T) {
 }
 
 func TestOperation_CodeServer_HeaderQueryFromBody(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -152,11 +152,11 @@ func TestOperation_CodeServer_HeaderQueryFromBody(t *testing.T) {
 
 func (d codeServerOperation) empty() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = null
@@ -166,11 +166,11 @@ resource "restful_operation" "test" {
 
 func (d codeServerOperation) idBilder() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path 			= "foo"
   id_builder	= "bar/$(body.id)"
   method 		= "POST"
@@ -186,11 +186,11 @@ resource "restful_operation" "test" {
 
 func (d codeServerOperation) headerquery(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "/tests/1"
   method = "POST"
   operation_header = {
@@ -216,11 +216,11 @@ resource "restful_operation" "test" {
 
 func (d codeServerOperation) headerqueryFromBody(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "/tests/1"
   method = "POST"
   delete_method = "DELETE"

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 	"github.com/stretchr/testify/require"
 )
 
@@ -137,17 +137,17 @@ func TestEphemeral_CodeServer_HeaderQueryFromBody(t *testing.T) {
 
 func (d codeServerEphemeral) basic(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-ephemeral "restful_resource" "test" {
+ephemeral "rest_resource" "test" {
   path = "/lease"
   method = "POST"
 }
 
 provider "echo" {
-  data = ephemeral.restful_resource.test.output
+  data = ephemeral.rest_resource.test.output
 }
 
 resource "echo" "test" {}
@@ -156,11 +156,11 @@ resource "echo" "test" {}
 
 func (d codeServerEphemeral) complete(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-ephemeral "restful_resource" "test" {
+ephemeral "rest_resource" "test" {
   path = "/lease"
   method = "POST"
 
@@ -176,15 +176,15 @@ ephemeral "restful_resource" "test" {
   close_method = "POST"
 }
 
-provider "restful" {
+provider "rest" {
   base_url = %q
   header = {
-	dep = ephemeral.restful_resource.test.output.foo
+	dep = ephemeral.rest_resource.test.output.foo
   }
   alias = "sleep" 
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "sleep"
   method = "POST"
   header = {
@@ -194,7 +194,7 @@ resource "restful_operation" "test" {
 }
 
 provider "echo" {
-  data = ephemeral.restful_resource.test.output
+  data = ephemeral.rest_resource.test.output
 }
 
 resource "echo" "test" {}
@@ -203,11 +203,11 @@ resource "echo" "test" {}
 
 func (d codeServerEphemeral) headerqueryFromBody(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-ephemeral "restful_resource" "test" {
+ephemeral "rest_resource" "test" {
   path = "/open"
   method = "POST"
   open_header = {

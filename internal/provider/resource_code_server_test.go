@@ -19,14 +19,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
 )
 
 type codeServerData struct{}
 
 func TestResource_CodeServer_ObjectArray(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	type object struct {
 		b  []byte
@@ -92,7 +92,7 @@ func TestResource_CodeServer_ObjectArray(t *testing.T) {
 }
 
 func TestResource_CodeServer_CreateRetString(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	type object struct {
 		b  []byte
@@ -147,7 +147,7 @@ func TestResource_CodeServer_CreateRetString(t *testing.T) {
 }
 
 func TestResource_CodeServer_RetFullURL(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	type object struct {
 		b []byte
@@ -196,7 +196,7 @@ func TestResource_CodeServer_RetFullURL(t *testing.T) {
 }
 
 func TestResource_CodeServer_HeaderQuery(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -254,7 +254,7 @@ func TestResource_CodeServer_HeaderQuery(t *testing.T) {
 }
 
 func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -315,7 +315,7 @@ func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
 }
 
 func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -323,7 +323,7 @@ func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
 		return
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		// From https://github.com/magodo/terraform-provider-restful/issues/130
+		// From https://github.com/laurentlesle/terraform-provider-rest/issues/130
 		b := []byte(`[
    {
       "property_name": "system",
@@ -361,7 +361,7 @@ func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
 }
 
 func TestResource_CodeServer_DeleteMethodBody(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -443,7 +443,7 @@ func TestResource_CodeServer_DeleteMethodBody(t *testing.T) {
 }
 
 func TestResource_CodeServer_DeleteMethodBodyRaw(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
@@ -572,11 +572,11 @@ func (d codeServerData) CheckDestroy(url, addr string) func(*terraform.State) er
 
 func (d codeServerData) object_array(url, v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "test"
   create_method = "PUT"
   body = [
@@ -590,11 +590,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) create_ret_string(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "test"
   create_method = "PUT"
   read_path = "$(path)/$(body)"
@@ -605,11 +605,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) create_ret_url(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests"
   read_path = "$url_path.trim_path(body.self)"
   body = {}
@@ -619,11 +619,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) headerquery(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests/1"
   create_header = {
   	type = "create"
@@ -656,11 +656,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) headerqueryFromBody(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests/1"
   create_header = {
   	type = "create"
@@ -697,11 +697,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) readResponseTemplate(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests/1"
   create_method = "PUT"
   body = {
@@ -719,11 +719,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) deleteMethodBody(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests/1"
   create_method = "PUT"
   delete_method = "PATCH"
@@ -744,11 +744,11 @@ resource "restful_resource" "test" {
 
 func (d codeServerData) deleteMethodBodyRaw(url string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/tests/1"
   create_method = "PUT"
   delete_method = "PATCH"

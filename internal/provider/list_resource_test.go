@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/querycheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/provider"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/provider"
 )
 
 type jsonServerList struct {
@@ -45,7 +45,7 @@ func TestListResource_JSONServer_Basic(t *testing.T) {
 	var qchecks []querycheck.QueryResultCheck
 	for i := range 3 {
 		qchecks = append(qchecks,
-			querycheck.ExpectIdentity("restful_resource.list", map[string]knownvalue.Check{
+			querycheck.ExpectIdentity("rest_resource.list", map[string]knownvalue.Check{
 				"id": knownvalue.StringExact(buildIdentity(strconv.Itoa(i + 1))),
 			}),
 		)
@@ -71,7 +71,7 @@ func TestListResource_JSONServer_Basic(t *testing.T) {
 				Query:  true,
 				Config: d.basicListQuerySelector(1),
 				QueryResultChecks: []querycheck.QueryResultCheck{
-					querycheck.ExpectIdentity("restful_resource.list", map[string]knownvalue.Check{
+					querycheck.ExpectIdentity("rest_resource.list", map[string]knownvalue.Check{
 						"id": knownvalue.StringExact(buildIdentity(strconv.Itoa(1))),
 					}),
 				},
@@ -82,11 +82,11 @@ func TestListResource_JSONServer_Basic(t *testing.T) {
 
 func (d jsonServerList) basic(n int) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   count = %d
   path = "posts"
   body = {
@@ -99,7 +99,7 @@ resource "restful_resource" "test" {
 
 func (d jsonServerList) basicListQuery() string {
 	return `
-	list "restful_resource" "list" {
+	list "rest_resource" "list" {
 		provider = restful
 		config {
 			path          = "/posts"
@@ -112,7 +112,7 @@ func (d jsonServerList) basicListQuery() string {
 }
 func (d jsonServerList) basicListQuerySelector(n int) string {
 	return fmt.Sprintf(`
-	list "restful_resource" "list" {
+	list "rest_resource" "list" {
 		provider = restful
 		config {
 			path          = "/posts"

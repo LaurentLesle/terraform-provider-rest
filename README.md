@@ -1,31 +1,75 @@
-# Terraform Provider Restful
+# Terraform Provider Rest
 
-This is a general Terraform provider aims to work for any platform as long as it exposes a RESTful API.
+> **Fork notice** — This provider is a fork of [`magodo/terraform-provider-restful`](https://github.com/magodo/terraform-provider-restful) based on commit [`4fd3282`](https://github.com/magodo/terraform-provider-restful/commit/4fd32820b81d014bf2be16bb0257cc15edfa87e8) (v0.25.2+2, 2026-03-27).
+> The provider has been renamed from `restful` to `rest` (`registry.terraform.io/laurentlesle/rest`).
 
-The document of this provider is available on [Terraform Provider Registry](https://registry.terraform.io/providers/magodo/restful/latest/docs).
+This is a general Terraform provider that works with any platform exposing a RESTful API, extended with first-class support for **agentic Infrastructure-as-Code (IaC)** workflows — where AI agents autonomously plan, validate, and provision infrastructure.
 
-## Features
+## Motivation — Agentic IaC
 
-- Different authentication choices: HTTP auth (basic, token), API Key auth and OAuth2 (client credential, password credential, refresh token).
+Traditional IaC relies on human-authored configurations. Agentic IaC shifts this model: an AI agent generates, validates, and applies Terraform plans end-to-end. This requires providers that can:
+
+- **Resolve dynamic references** across resource boundaries without hard-coded dependencies — agents compose configurations from YAML/JSON specs and need late-binding `ref:` expressions.
+- **Validate external resources** before provisioning — agents must confirm that referenced subscriptions, resource groups, or GitHub repos actually exist, and enrich the plan with live attributes (e.g. fetching a resource group's `location` from the ARM API).
+- **Deploy Kubernetes workloads** (Helm charts, service accounts) as part of a single Terraform run — agents orchestrate full-stack deployments, not just cloud resources.
+- **Merge configuration layers** — agents build resolution contexts by merging YAML-driven config with module outputs, enabling a data-driven, composable IaC pattern.
+
+This fork adds the primitives needed to support these workflows while preserving full backward compatibility with the upstream `restful` provider.
+
+## Features (upstream)
+
+- Different authentication choices: HTTP auth (basic, token), API Key auth, and OAuth2 (client credential, password credential, refresh token)
 - Customized CRUD methods and paths
 - Support precheck conditions
 - Support polling asynchronous operations
 - Partial `body` tracking: only the specified properties of the resource in the `body` attribute is tracked for diffs
-- `restful_operation` resource that supports arbitrary Restful API call (e.g. `POST`) on create/update
-- Ephemeral resource `restful_resource`
+- `rest_operation` resource that supports arbitrary RESTful API calls (e.g. `POST`) on create/update
+- Ephemeral resource `rest_resource`
 - [Write-only attributes](https://developer.hashicorp.com/terraform/plugin/framework/resources/write-only-arguments) supported
 - Resource Identity supported
 - List Resource supported
 
-## Why
+## Extensions (this fork)
 
-Given there already exists platform oriented, first-class providers, why do I create this? The reason is that most providers today are manually maintained, which means some latest features are likely not available in these first-class providers. For this case, `terraform-provider-restful` can be used as your escape hatch.
+### New resources
 
-Another common use case is that the platform you are currently working on do not have a Terraform provider yet. In this case, you can use `terraform-provider-restful` to manage the resources for that platform.
+| Resource | Description |
+|---|---|
+| `rest_helm_release` | Manages Helm chart releases on a Kubernetes cluster. Supports OCI registries (with ORAS fallback for non-standard config media types), `set` / `set_sensitive` value overrides, namespace creation, and wait-for-ready semantics. |
+| `rest_token` | Creates a Kubernetes ServiceAccount with a short-lived bearer token via the TokenRequest API. Automatically provisions the ServiceAccount, binds `cluster-admin` (configurable), and refreshes the token on read when it is expired or near expiry. Useful for bootstrapping authenticated access to K8s API servers from Terraform. |
+
+### New provider functions
+
+| Function | Description |
+|---|---|
+| `provider::rest::resolve` | Resolves a single `ref:` expression (e.g. `ref:resource_groups.rg1.location\|westeurope`) against a context map. Supports dot-separated path walking and optional default values after `\|`. |
+| `provider::rest::resolve_map` | Recursively resolves all `ref:` expressions inside a map of resource instances. Every string value starting with `ref:` is resolved against the context; non-ref values pass through unchanged. |
+| `provider::rest::merge_with_outputs` | Merges a map of resource config entries with their corresponding module outputs (keyed by the same `for_each` keys). Outputs take precedence on collision. The result is a fully-enriched resolution context layer. |
+| `provider::rest::validate_externals` | Validates and enriches external resource references via read-only API calls (ARM, Microsoft Graph, GitHub). Schema-driven — supports both an external schema registry (YAML) and inline `_schema` keys. Can fetch live attributes (`_exported_attributes`) and inject them into the externals map. Raises errors on HTTP 404; supports `fail_on_warning` mode. |
+
+### New data source
+
+| Data source | Description |
+|---|---|
+| `rest_validate_externals` | Data source wrapper around `validate_externals` for use in contexts where provider functions are not available. Emits native Terraform warnings for API issues. |
+
+### Provider-level configuration additions
+
+The provider block accepts additional optional attributes to supply tokens for external validation:
+
+- `arm_token` — Azure Resource Manager bearer token
+- `arm_tenant_tokens` — Map of tenant ID to ARM token for cross-tenant access
+- `graph_token` — Microsoft Graph bearer token
+- `github_token` — GitHub API token
+- `fail_on_warning` — When `true`, validation warnings are promoted to hard errors
+
+These tokens are also read from environment variables as a fallback.
+
+The provider can now be configured **without a `base_url`** when used purely for its functions (e.g. `resolve`, `validate_externals`), skipping HTTP client initialization.
 
 ## Requirement
 
-`terraform-provider-restful` has following assumptions about the API:
+`terraform-provider-rest` has following assumptions about the API:
 
 - The API is expected to support the following HTTP methods:
     - `POST`/`PUT`: create the resource
@@ -35,4 +79,4 @@ Another common use case is that the platform you are currently working on do not
 - The API content type is `application/json`
 - The resource should have a unique identifier (e.g. `/foos/foo1`).
 
-Regarding the users, as `terraform-provider-restful` is essentially just a terraform-wrapped API client, practitioners have to know the details of the API for the target platform quite well.
+Regarding the users, as `terraform-provider-rest` is essentially just a terraform-wrapped API client, practitioners have to know the details of the API for the target platform quite well.

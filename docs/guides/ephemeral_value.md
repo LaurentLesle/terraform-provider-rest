@@ -2,7 +2,7 @@
 page_title: "Write Only Attribute"
 subcategory: ""
 description: |-
-  The usage of `ephemeral_body` in `restful_resource` and `restful_operation`.
+  The usage of `ephemeral_body` in `rest_resource` and `rest_operation`.
 ---
 
 # Intro
@@ -13,7 +13,7 @@ description: |-
 
 ## Before
 
-Previously, the `restful_resource` has an attribute `write_only_attrs`:
+Previously, the `rest_resource` has an attribute `write_only_attrs`:
 
 > `write_only_attrs` (List of String) A list of paths (in [gjson syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)) to the attributes that are only settable, but won't be read in GET response.
 
@@ -98,6 +98,6 @@ The reason to store the nullified ephemeral body in the private state is because
 
 NOTE: During import, therer is no way to avoid the *sensitive* attributes being exposed from `output`, if any. To avoid it, remember to specifiy the `ephemeral_body` in the config and re-apply after importing the resource.
 
-# Use with ephemeral `restful_resource`
+# Use with ephemeral `rest_resource`
 
-Since *write-only* is one of the valid contexts that can reference the ephemeral values, `ephemeral_body` can be used to reference, any attribute exposed by the `output` of the *ephemeral* `restful_resource`.
+Since *write-only* is one of the valid contexts that can reference the ephemeral values, `ephemeral_body` can be used to reference, any attribute exposed by the `output` of the *ephemeral* `rest_resource`.

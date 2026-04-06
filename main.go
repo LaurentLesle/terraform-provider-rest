@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/magodo/terraform-provider-restful/internal/provider"
+	"github.com/laurentlesle/terraform-provider-rest/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
@@ -21,7 +21,7 @@ func main() {
 	ctx := context.Background()
 	serveOpts := providerserver.ServeOpts{
 		Debug:   debug,
-		Address: "registry.terraform.io/magodo/restful",
+		Address: "registry.terraform.io/laurentlesle/rest",
 	}
 
 	err := providerserver.Serve(ctx, provider.New, serveOpts)

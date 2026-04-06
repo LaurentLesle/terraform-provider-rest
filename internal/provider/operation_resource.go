@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -24,9 +25,9 @@ import (
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
 	"github.com/magodo/terraform-plugin-framework-helper/ephemeral"
 	"github.com/magodo/terraform-plugin-framework-helper/jsonset"
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
-	myvalidator "github.com/magodo/terraform-provider-restful/internal/validator"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 )
 
 type OperationResource struct {
@@ -51,6 +52,7 @@ type operationResourceData struct {
 	DeleteQuery    types.Map `tfsdk:"delete_query"`
 
 	Header          types.Map `tfsdk:"header"`
+	EphemeralHeader types.Map `tfsdk:"ephemeral_header"`
 	OperationHeader types.Map `tfsdk:"operation_header"`
 	DeleteHeader    types.Map `tfsdk:"delete_header"`
 
@@ -80,8 +82,8 @@ func (r *OperationResource) Schema(ctx context.Context, req resource.SchemaReque
 	pollDelete.Validators = append(pollDelete.Validators, objectvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("delete_method")))
 
 	resp.Schema = schema.Schema{
-		Description:         "`restful_operation` represents a one-time API call operation.",
-		MarkdownDescription: "`restful_operation` represents a one-time API call operation.",
+		Description:         "`rest_operation` represents a one-time API call operation.",
+		MarkdownDescription: "`rest_operation` represents a one-time API call operation.",
 		Version:             2,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -100,7 +102,7 @@ func (r *OperationResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			// This is actually the same as the `read_path` of restful_resource, besides the name
+			// This is actually the same as the `read_path` of rest_resource, besides the name
 			"id_builder": schema.StringAttribute{
 				Description:         "The pattern used to build the `id`. The `path` is used as the `id` instead if absent." + bodyOrPathParamDescription,
 				MarkdownDescription: "The pattern used to build the `id`. The `path` is used as the `id` instead if absent." + bodyOrPathParamDescription,
@@ -151,6 +153,13 @@ func (r *OperationResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "The header parameters that are applied to each request. This overrides the `header` set in the provider block.",
 				ElementType:         types.StringType,
 				Optional:            true,
+			},
+			"ephemeral_header": schema.MapAttribute{
+				Description:         "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
+				MarkdownDescription: "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
+				ElementType:         types.StringType,
+				Optional:            true,
+				WriteOnly:           true,
 			},
 			"operation_header": schema.MapAttribute{
 				Description:         operationOverridableAttrDescription("header", "operation"),
@@ -340,7 +349,7 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 		tflog.Info(ctx, "Update an operation resource", map[string]interface{}{"id": plan.ID.ValueString()})
 	}
 
-	opt, diags := r.p.apiOpt.ForOperation(ctx, plan.Method, plan.Query, plan.Header, plan.OperationQuery, plan.OperationHeader, nil)
+	opt, diags := r.p.apiOpt.ForOperation(ctx, plan.Method, plan.Query, plan.Header, plan.EphemeralHeader, plan.OperationQuery, plan.OperationHeader, nil)
 	respDiags.Append(diags...)
 	if respDiags.HasError() {
 		return
@@ -417,6 +426,7 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 	}
 
 	// For LRO, wait for completion
+	var lastPollBody []byte
 	if !plan.Poll.IsNull() {
 		var d pollData
 		if diags := plan.Poll.As(ctx, &d, basetypes.ObjectAsOptions{}); diags.HasError() {
@@ -460,7 +470,9 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 			)
 			return
 		}
-		if err := p.PollUntilDone(ctx, c, nil); err != nil {
+		if err := p.PollUntilDone(ctx, c, func(_ context.Context, resp *resty.Response) {
+			lastPollBody = resp.Body()
+		}); err != nil {
 			respDiags.AddError(
 				"Operation: Polling failure",
 				err.Error(),
@@ -472,8 +484,12 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 	// Set resource ID to state
 	plan.ID = types.StringValue(resourceId)
 
-	// Set Output to state
+	// Set Output to state — use the final polled response if polling occurred,
+	// since the initial operation response may have an intermediate status.
 	rb := response.Body()
+	if lastPollBody != nil {
+		rb = lastPollBody
+	}
 	if !plan.OutputAttrs.IsNull() {
 		// Update the output to only contain the specified attributes.
 		var outputAttrs []string
@@ -571,7 +587,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	opt, diags := r.p.apiOpt.ForOperation(ctx, state.DeleteMethod, state.Query, state.Header, state.DeleteQuery, state.DeleteHeader, output)
+	opt, diags := r.p.apiOpt.ForOperation(ctx, state.DeleteMethod, state.Query, state.Header, state.EphemeralHeader, state.DeleteQuery, state.DeleteHeader, output)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
@@ -660,7 +676,7 @@ func (r *OperationResource) RenderOption() tffwdocs.ResourceRenderOption {
 			{
 				Header: "Azure Register RP",
 				HCL: `
-				resource "restful_operation" "register_rp" {
+				resource "rest_operation" "register_rp" {
 					path = format("/subscriptions/%s/providers/Microsoft.ProviderHub/register", var.subscription_id)
 					query = {
 						api-version = ["2014-04-01-preview"]

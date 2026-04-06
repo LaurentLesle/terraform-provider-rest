@@ -8,11 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 )
 
 func TestOperationResource_Azure_Register_RP(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -35,7 +35,7 @@ func TestOperationResource_Azure_Register_RP(t *testing.T) {
 }
 
 func TestOperationResource_Azure_GetToken(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -53,7 +53,7 @@ func TestOperationResource_Azure_GetToken(t *testing.T) {
 
 func (d azureData) registerRP(rp string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %[1]q
   security = {
     oauth2 = {
@@ -67,7 +67,7 @@ provider "restful" {
   }
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "/subscriptions/%[5]s/providers/%[6]s/register"
   query = {
     api-version = ["2014-04-01-preview"]
@@ -87,7 +87,7 @@ resource "restful_operation" "test" {
 
 func (d azureData) unregisterRP(rp string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %[1]q
   security = {
     oauth2 = {
@@ -101,7 +101,7 @@ provider "restful" {
   }
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "/subscriptions/%[5]s/providers/%[6]s/unregister"
   query = {
     api-version = ["2014-04-01-preview"]
@@ -121,11 +121,11 @@ resource "restful_operation" "test" {
 
 func (d azureData) getToken() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = "https://login.microsoftonline.com"
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path   = "/%s/oauth2/v2.0/token"
   method = "POST"
   header = {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 )
 
 type jsonServerAction struct {
@@ -42,11 +42,11 @@ func TestAction_JSONServer_Basic(t *testing.T) {
 
 func (d jsonServerAction) basic() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {
   	foo = "bar"
@@ -59,14 +59,14 @@ resource "restful_resource" "test" {
   lifecycle {
     action_trigger {
       events = [after_create]
-      actions = [action.restful_action.test]
+      actions = [action.rest_action.test]
     }
   }
 }
 
-action "restful_action" "test" {
+action "rest_action" "test" {
   config {
-    path = restful_resource.test.id
+    path = rest_resource.test.id
     method = "GET"
   }
 }

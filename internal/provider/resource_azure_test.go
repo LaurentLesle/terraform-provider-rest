@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
 )
 
 const RESTFUL_AZURE_TENANT_ID = "RESTFUL_AZURE_TENANT_ID"
@@ -60,7 +60,7 @@ func newAzureData() azureData {
 }
 
 func TestResource_Azure_ResourceGroup(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -98,7 +98,7 @@ func TestResource_Azure_ResourceGroup(t *testing.T) {
 }
 
 func TestResource_Azure_ResourceGroup_updatePath(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -136,7 +136,7 @@ func TestResource_Azure_ResourceGroup_updatePath(t *testing.T) {
 }
 
 func TestResource_Azure_VirtualNetwork(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -174,7 +174,7 @@ func TestResource_Azure_VirtualNetwork(t *testing.T) {
 }
 
 func TestResource_Azure_VirtualNetwork_Precheck(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -212,7 +212,7 @@ func TestResource_Azure_VirtualNetwork_Precheck(t *testing.T) {
 }
 
 func TestResource_Azure_VirtualNetwork_SimplePoll(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -250,7 +250,7 @@ func TestResource_Azure_VirtualNetwork_SimplePoll(t *testing.T) {
 }
 
 func TestResource_Azure_RouteTable_Precheck(t *testing.T) {
-	addr := "restful_resource.route1"
+	addr := "rest_resource.route1"
 	d := newAzureData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -322,7 +322,7 @@ func (d azureData) CheckDestroy(addr string) func(*terraform.State) error {
 
 func (d azureData) resourceGroup() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -336,7 +336,7 @@ provider "restful" {
   }
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -360,7 +360,7 @@ resource "restful_resource" "test" {
 }
 func (d azureData) resourceGroup_complete() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -374,7 +374,7 @@ provider "restful" {
   }
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -402,7 +402,7 @@ resource "restful_resource" "test" {
 
 func (d azureData) resourceGroup_updatePath() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -416,7 +416,7 @@ provider "restful" {
   }
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -443,7 +443,7 @@ resource "restful_resource" "test" {
 
 func (d azureData) resourceGroup_updatePath_complete() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -457,7 +457,7 @@ provider "restful" {
   }
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -590,7 +590,7 @@ func (d azureData) routeImportStateIdFunc(addr string) func(s *terraform.State) 
 
 func (d azureData) vnet_template() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -605,7 +605,7 @@ provider "restful" {
   create_method = "PUT"
 }
 
-resource "restful_resource" "rg" {
+resource "rest_resource" "rg" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -642,8 +642,8 @@ locals {
   }
 }
 
-resource "restful_resource" "test" {
-  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", restful_resource.rg.id, %d)
+resource "rest_resource" "test" {
+  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", rest_resource.rg.id, %d)
   query = {
     api-version = ["2021-05-01"]
   }
@@ -670,7 +670,7 @@ resource "restful_resource" "test" {
 // Note that the precheck used here is meaningless, only meant to test this feature won't cause issue.
 func (d azureData) vnet_precheck(tag string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -685,7 +685,7 @@ provider "restful" {
   create_method = "PUT"
 }
 
-resource "restful_resource" "rg" {
+resource "rest_resource" "rg" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -708,7 +708,7 @@ locals {
   vnet_precheck = [
 	  {
 	  	api = {
-			path = restful_resource.rg.id
+			path = rest_resource.rg.id
 			query = {
 			  api-version = ["2020-06-01"]
 			}
@@ -729,8 +729,8 @@ locals {
   }
 }
 
-resource "restful_resource" "test" {
-  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", restful_resource.rg.id, %d)
+resource "rest_resource" "test" {
+  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", rest_resource.rg.id, %d)
   query = {
     api-version = ["2021-05-01"]
   }
@@ -762,8 +762,8 @@ func (d azureData) vnet_simple_poll(tag string) string {
 	return fmt.Sprintf(`
 %s
 
-resource "restful_resource" "test" {
-  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", restful_resource.rg.id, %d)
+resource "rest_resource" "test" {
+  path = format("%%s/providers/Microsoft.Network/virtualNetworks/restful-test-%%d", rest_resource.rg.id, %d)
   query = {
     api-version = ["2021-05-01"]
   }
@@ -807,7 +807,7 @@ resource "restful_resource" "test" {
 
 func (d azureData) routetable_precheck(tag string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
     oauth2 = {
@@ -822,7 +822,7 @@ provider "restful" {
   create_method = "PUT"
 }
 
-resource "restful_resource" "rg" {
+resource "rest_resource" "rg" {
   path = "/subscriptions/%s/resourceGroups/acctest-%d"
   query = {
     api-version = ["2020-06-01"]
@@ -853,14 +853,14 @@ locals {
   }
   route_precheck = [
     {
-      mutex = restful_resource.table.id
+      mutex = rest_resource.table.id
     }
   ]
 }
 
 
-resource "restful_resource" "table" {
-  path = format("%%s/providers/Microsoft.Network/routeTables/restfultest-%d", restful_resource.rg.id)
+resource "rest_resource" "table" {
+  path = format("%%s/providers/Microsoft.Network/routeTables/restfultest-%d", rest_resource.rg.id)
   update_method = "PATCH"
   query = {
     api-version = ["2022-07-01"]
@@ -875,8 +875,8 @@ resource "restful_resource" "table" {
   poll_delete = local.poll
 }
 
-resource "restful_resource" "route1" {
-  path = format("%%s/routes/route1", restful_resource.table.id)
+resource "rest_resource" "route1" {
+  path = format("%%s/routes/route1", rest_resource.table.id)
   query = {
     api-version = ["2022-07-01"]
   }
@@ -897,8 +897,8 @@ resource "restful_resource" "route1" {
   }
 }
 
-resource "restful_resource" "route2" {
-  path = format("%%s/routes/route2", restful_resource.table.id)
+resource "rest_resource" "route2" {
+  path = format("%%s/routes/route2", rest_resource.table.id)
   query = {
     api-version = ["2022-07-01"]
   }

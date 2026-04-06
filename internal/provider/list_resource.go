@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/magodo/terraform-provider-restful/internal/client"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
 )
 
 type ListResource struct {
@@ -51,7 +51,7 @@ func (l *ListResource) Metadata(ctx context.Context, req resource.MetadataReques
 
 func (l *ListResource) ListResourceConfigSchema(ctx context.Context, req list.ListResourceSchemaRequest, resp *list.ListResourceSchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "List restful resources.",
+		MarkdownDescription: "List rest resources.",
 		Attributes: map[string]schema.Attribute{
 			//////////////////////////
 			// List related attributes

@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
-	"github.com/magodo/terraform-provider-restful/internal/client"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/client"
 )
 
 const RESTFUL_ADO_PAT = "RESTFUL_ADO_PAT"
@@ -45,7 +45,7 @@ func newAdoData() adoData {
 }
 
 func TestResource_ADO_Project(t *testing.T) {
-	addr := "restful_resource.test"
+	addr := "rest_resource.test"
 	d := newAdoData()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -110,7 +110,7 @@ func (d adoData) CheckDestroy(addr string) func(*terraform.State) error {
 
 func (d adoData) projectTemplate() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
   security = {
 	http = {
@@ -122,7 +122,7 @@ provider "restful" {
   }
 }
 
-data "restful_resource" "process" {
+data "rest_resource" "process" {
   id = "_apis/process/processes"
   method = "GET"
   header = {
@@ -149,7 +149,7 @@ locals {
   }
 }
 
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "_apis/projects"
   read_path = "_apis/projects/$(body.id)"
   update_method = "PATCH"
@@ -164,11 +164,11 @@ resource "restful_resource" "test" {
   poll_delete = local.poll
   body = {
     name = "%s"
-    description = "Created by the restful provider"
+    description = "Created by the rest provider"
     visibility = "private"
     capabilities = {
       processTemplate = {
-        templateTypeId = data.restful_resource.process.output.id
+        templateTypeId = data.rest_resource.process.output.id
       }
       versioncontrol = {
         sourceControlType = "git"

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/magodo/terraform-provider-restful/internal/acceptance"
+	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
 )
 
 type jsonServerOperation struct {
@@ -39,7 +39,7 @@ func newJsonServerOperation() jsonServerOperation {
 }
 
 func TestOperation_JSONServer_Basic(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newJsonServerOperation()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -56,8 +56,8 @@ func TestOperation_JSONServer_Basic(t *testing.T) {
 }
 
 func TestOperation_JSONServer_withDelete(t *testing.T) {
-	addr := "restful_operation.test"
-	resaddr := "restful_resource.test"
+	addr := "rest_operation.test"
+	resaddr := "rest_resource.test"
 	d := newJsonServerOperation()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -84,7 +84,7 @@ func TestOperation_JSONServer_withDelete(t *testing.T) {
 }
 
 func TestOperation_JSONServer_statusLocatorParam(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newJsonServerOperation()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -114,7 +114,7 @@ func TestOperation_JSONServer_EphemeralBodyOverlap(t *testing.T) {
 }
 
 func TestOperation_JSONServer_EphemeralBody(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newJsonServerOperation()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -160,9 +160,9 @@ func TestOperation_JSONServer_MigrateV0ToV1(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: nil,
 				ExternalProviders: map[string]resource.ExternalProvider{
-					"restful": {
+					"rest": {
 						VersionConstraint: "= 0.13.2",
-						Source:            "registry.terraform.io/magodo/restful",
+						Source:            "registry.terraform.io/laurentlesle/rest",
 					},
 				},
 				Config: d.migrate_v0(),
@@ -179,11 +179,11 @@ func TestOperation_JSONServer_MigrateV0ToV1(t *testing.T) {
 
 func (d jsonServerOperation) basic() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = {
@@ -195,12 +195,12 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) withDelete(create bool) string {
 	tpl := fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
 # This resource is used to check the state of the posts after the operation resource is deleted
-resource "restful_resource" "test" {
+resource "rest_resource" "test" {
   path = "posts"
   body = {}
   read_path = "$(path)/$(body.id)"
@@ -210,14 +210,14 @@ resource "restful_resource" "test" {
 
 	if create {
 		tpl += `
-resource "restful_operation" "test" {
-  path = restful_resource.test.id
+resource "rest_operation" "test" {
+  path = rest_resource.test.id
   method = "PUT"
   body = {
     enabled = true
   }
   delete_method = "PUT"
-  delete_path = restful_resource.test.id
+  delete_path = rest_resource.test.id
   delete_body = {
     enabled = false
   }
@@ -229,11 +229,11 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) statusLocatorParam() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   delete_method = "DELETE"
@@ -261,11 +261,11 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) migrate_v0() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = jsonencode({
@@ -277,11 +277,11 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) migrate_v1() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = {
@@ -293,11 +293,11 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) ephemeralBodyOverlap() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = {
@@ -312,7 +312,7 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) ephemeralBody(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
@@ -322,7 +322,7 @@ variable "v" {
   default = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = {
@@ -337,11 +337,11 @@ resource "restful_operation" "test" {
 
 func (d jsonServerOperation) ephemeralBodyNull() string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   body = {
@@ -353,7 +353,7 @@ resource "restful_operation" "test" {
 }
 
 func TestOperation_JSONServer_UseSensitiveOutput(t *testing.T) {
-	addr := "restful_operation.test"
+	addr := "rest_operation.test"
 	d := newJsonServerOperation()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { d.precheck(t) },
@@ -373,11 +373,11 @@ func TestOperation_JSONServer_UseSensitiveOutput(t *testing.T) {
 
 func (d jsonServerOperation) useSensitiveOutput(v string) string {
 	return fmt.Sprintf(`
-provider "restful" {
+provider "rest" {
   base_url = %q
 }
 
-resource "restful_operation" "test" {
+resource "rest_operation" "test" {
   path = "posts"
   method = "POST"
   use_sensitive_output = true

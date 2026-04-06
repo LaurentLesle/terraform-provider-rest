@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/magodo/terraform-provider-restful/internal/exparam"
-	myvalidator "github.com/magodo/terraform-provider-restful/internal/validator"
+	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 )
 
 type EphemeralResource struct {
@@ -43,8 +43,9 @@ type ephemeralResourceData struct {
 	OpenQuery  types.Map     `tfsdk:"open_query"`
 	OpenHeader types.Map     `tfsdk:"open_header"`
 
-	Query  types.Map `tfsdk:"query"`
-	Header types.Map `tfsdk:"header"`
+	Query           types.Map `tfsdk:"query"`
+	Header          types.Map `tfsdk:"header"`
+	EphemeralHeader types.Map `tfsdk:"ephemeral_header"`
 
 	RenewMethod  types.String  `tfsdk:"renew_method"`
 	RenewBodyRaw types.String  `tfsdk:"renew_body_raw"`
@@ -96,8 +97,8 @@ func (r *EphemeralResource) Configure(ctx context.Context, req ephemeral.Configu
 
 func (e *EphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "`restful_resource` manages an ephemeral resource.",
-		MarkdownDescription: "`restful_resource` manages an ephemeral resource.",
+		Description:         "`rest_resource` manages an ephemeral resource.",
+		MarkdownDescription: "`rest_resource` manages an ephemeral resource.",
 		Attributes: map[string]schema.Attribute{
 			"method": schema.StringAttribute{
 				Description:         "The HTTP method to open the ephemeral resource.",
@@ -138,6 +139,12 @@ func (e *EphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequ
 			"header": schema.MapAttribute{
 				Description:         "The header parameters that are applied to each request. This overrides the `header` set in the provider block.",
 				MarkdownDescription: "The header parameters that are applied to each request. This overrides the `header` set in the provider block.",
+				ElementType:         types.StringType,
+				Optional:            true,
+			},
+			"ephemeral_header": schema.MapAttribute{
+				Description:         "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
+				MarkdownDescription: "The ephemeral header parameters. This will be merged into the `header` for API calls but NOT persisted to state.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -379,7 +386,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 
 	tflog.Info(ctx, "Open an ephemeral resource", map[string]interface{}{"path": config.Path.ValueString()})
 
-	opt, diags := e.p.apiOpt.ForOperation(ctx, config.Method, config.Query, config.Header, config.OpenQuery, config.OpenHeader, nil)
+	opt, diags := e.p.apiOpt.ForOperation(ctx, config.Method, config.Query, config.Header, config.EphemeralHeader, config.OpenQuery, config.OpenHeader, nil)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
@@ -624,7 +631,7 @@ func (e *EphemeralResource) Renew(ctx context.Context, req ephemeral.RenewReques
 			return
 		}
 	}
-	opt, diags := e.p.apiOpt.ForOperation(ctx, pd.Method, pd.DefaultQuery, pd.DefaultHeader, pd.Query, pd.Header, output)
+	opt, diags := e.p.apiOpt.ForOperation(ctx, pd.Method, pd.DefaultQuery, pd.DefaultHeader, types.MapNull(types.StringType), pd.Query, pd.Header, output)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
@@ -694,7 +701,7 @@ func (e *EphemeralResource) Close(ctx context.Context, req ephemeral.CloseReques
 			return
 		}
 	}
-	opt, diags := e.p.apiOpt.ForOperation(ctx, pd.Method, pd.DefaultQuery, pd.DefaultHeader, pd.Query, pd.Header, output)
+	opt, diags := e.p.apiOpt.ForOperation(ctx, pd.Method, pd.DefaultQuery, pd.DefaultHeader, types.MapNull(types.StringType), pd.Query, pd.Header, output)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
@@ -722,7 +729,7 @@ func (e *EphemeralResource) RenderOption() tffwdocs.EphemeralResourceRenderOptio
 		Examples: []tffwdocs.Example{
 			{
 				HCL: `
-ephemeral "restful_resource" "test" {
+ephemeral "rest_resource" "test" {
   path = "/lease"
   method = "POST"
 
