@@ -17,10 +17,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
 	"github.com/magodo/terraform-plugin-framework-helper/ephemeral"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 )
 
 type Action struct {

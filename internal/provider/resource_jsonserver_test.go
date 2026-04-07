@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/acceptance"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
 )
 
 const RESTFUL_JSON_SERVER_URL = "RESTFUL_JSON_SERVER_URL"

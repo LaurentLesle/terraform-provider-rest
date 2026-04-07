@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 )
 
 type DataSource struct {

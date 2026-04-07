@@ -4,7 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
-	"github.com/laurentlesle/terraform-provider-rest/internal/provider"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/provider"
 )
 
 func ProviderFactory() map[string]func() (tfprotov6.ProviderServer, error) {

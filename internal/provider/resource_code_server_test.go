@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/acceptance"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
 )
 
 type codeServerData struct{}
@@ -323,7 +323,7 @@ func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
 		return
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		// From https://github.com/laurentlesle/terraform-provider-rest/issues/130
+		// From https://github.com/LaurentLesle/terraform-provider-rest/issues/130
 		b := []byte(`[
    {
       "property_name": "system",

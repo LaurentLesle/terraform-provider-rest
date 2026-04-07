@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/locks"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/locks"
 )
 
 func precheck(ctx context.Context, c *client.Client, apiOpt apiOption, defaultPath string, defaultHeader client.Header, defaultQuery client.Query, prechecks basetypes.ListValue, body basetypes.DynamicValue) (func(), diag.Diagnostics) {
