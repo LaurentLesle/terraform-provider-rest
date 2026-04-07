@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/acceptance"
 )
 
 type codeServerOperation struct {

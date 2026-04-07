@@ -12,7 +12,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
 	"golang.org/x/net/publicsuffix"
 )
 

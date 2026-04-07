@@ -1,4 +1,4 @@
-module github.com/laurentlesle/terraform-provider-rest
+module github.com/LaurentLesle/terraform-provider-rest
 
 go 1.26.0
 

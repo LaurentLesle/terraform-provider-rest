@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/acceptance"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
 )
 
 func validateLocator(locator string) error {

@@ -8,6 +8,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/dynamicvalidator"
@@ -30,10 +34,6 @@ import (
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
 	"github.com/magodo/terraform-plugin-framework-helper/ephemeral"
 	"github.com/magodo/terraform-plugin-framework-helper/jsonset"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

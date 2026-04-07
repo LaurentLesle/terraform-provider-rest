@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/laurentlesle/terraform-provider-rest/internal/provider/migrate"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/provider/migrate"
 )
 
 func (r *OperationResource) UpgradeState(context.Context) map[int64]resource.StateUpgrader {

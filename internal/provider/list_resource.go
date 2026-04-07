@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
 )
 
 type ListResource struct {

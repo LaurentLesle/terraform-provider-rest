@@ -27,11 +27,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/defaults"
-	"github.com/laurentlesle/terraform-provider-rest/internal/functions"
-	"github.com/laurentlesle/terraform-provider-rest/internal/resources"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/functions"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/resources"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 )
 

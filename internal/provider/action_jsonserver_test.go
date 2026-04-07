@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/laurentlesle/terraform-provider-rest/internal/acceptance"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/acceptance"
 )
 
 type jsonServerAction struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/laurentlesle/terraform-provider-rest/internal/attrpath"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/attrpath"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

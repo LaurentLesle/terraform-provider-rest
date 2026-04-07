@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/laurentlesle/terraform-provider-rest/internal/functions"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/functions"
 )
 
 var _ datasource.DataSource = &ValidateExternalsDataSource{}

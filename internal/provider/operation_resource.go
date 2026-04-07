@@ -25,9 +25,9 @@ import (
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
 	"github.com/magodo/terraform-plugin-framework-helper/ephemeral"
 	"github.com/magodo/terraform-plugin-framework-helper/jsonset"
-	"github.com/laurentlesle/terraform-provider-rest/internal/client"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 )
 
 type OperationResource struct {

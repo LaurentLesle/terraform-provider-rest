@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 	"github.com/magodo/terraform-plugin-framework-helper/dynamic"
-	"github.com/laurentlesle/terraform-provider-rest/internal/exparam"
-	myvalidator "github.com/laurentlesle/terraform-provider-rest/internal/validator"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 )
 
 type EphemeralResource struct {

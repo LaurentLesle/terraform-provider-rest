@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	fwprovider "github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/laurentlesle/terraform-provider-rest/internal/provider"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/provider"
 )
 
 func TestSchemaValidation(t *testing.T) {
