@@ -45,6 +45,7 @@ This fork adds the primitives needed to support these workflows while preserving
 | `provider::rest::resolve` | Resolves a single `ref:` expression (e.g. `ref:resource_groups.rg1.location\|westeurope`) against a context map. Supports dot-separated path walking and optional default values after `\|`. |
 | `provider::rest::resolve_map` | Recursively resolves all `ref:` expressions inside a map of resource instances. Every string value starting with `ref:` is resolved against the context; non-ref values pass through unchanged. |
 | `provider::rest::merge_with_outputs` | Merges a map of resource config entries with their corresponding module outputs (keyed by the same `for_each` keys). Outputs take precedence on collision. The result is a fully-enriched resolution context layer. |
+| `provider::rest::nacl_seal` | Encrypts a secret using NaCl sealed-box encryption (`crypto_box_seal` from libsodium). Accepts a plaintext string and a base64-encoded 32-byte Curve25519 public key; returns the ciphertext as a base64 string. Deterministic for the same inputs (Terraform-safe). Used by the GitHub Actions Secrets API. |
 | `provider::rest::validate_externals` | Validates and enriches external resource references via read-only API calls (ARM, Microsoft Graph, GitHub). Schema-driven — supports both an external schema registry (YAML) and inline `_schema` keys. Can fetch live attributes (`_exported_attributes`) and inject them into the externals map. Raises errors on HTTP 404; supports `fail_on_warning` mode. |
 
 ### New data source

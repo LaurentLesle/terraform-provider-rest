@@ -10,6 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/functions"
+	"github.com/LaurentLesle/terraform-provider-rest/internal/resources"
+	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -27,11 +32,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
-	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
-	"github.com/LaurentLesle/terraform-provider-rest/internal/functions"
-	"github.com/LaurentLesle/terraform-provider-rest/internal/resources"
-	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 )
 
@@ -225,6 +225,7 @@ func (p *Provider) Functions(_ context.Context) []func() function.Function {
 		functions.NewResolveFunction,
 		functions.NewResolveMapFunction,
 		functions.NewMergeWithOutputsFunction,
+		functions.NewNaclSealFunction,
 		func() function.Function {
 			return functions.NewValidateExternalsWithConfig(p)
 		},
