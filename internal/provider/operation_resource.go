@@ -343,6 +343,9 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 		return
 	}
 
+	// WriteOnly attributes (e.g. ephemeral_header) are only in config, not plan.
+	plan.EphemeralHeader = config.EphemeralHeader
+
 	if forCreate {
 		tflog.Info(ctx, "Create an operation resource", map[string]interface{}{"id": plan.Path.ValueString()})
 	} else {
