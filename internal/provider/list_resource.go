@@ -171,7 +171,7 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 		body, err = dynamic.ToJSON(config.Body)
 		if err != nil {
 			stream.Results = list.ListResultsStreamDiagnostics(diag.Diagnostics{diag.NewErrorDiagnostic(
-				"Error to convert body",
+				"converting request body",
 				err.Error(),
 			)})
 			return
@@ -181,7 +181,7 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 	response, err := c.ReadLR(ctx, config.Path.ValueString(), body, *opt)
 	if err != nil {
 		stream.Results = list.ListResultsStreamDiagnostics(diag.Diagnostics{diag.NewErrorDiagnostic(
-			"Error to call Read",
+			"calling read API",
 			err.Error(),
 		)})
 		return

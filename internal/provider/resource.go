@@ -882,7 +882,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 		response, err := c.Read(ctx, checkPath, *opt)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Existance check failed",
+				"existence check failed",
 				err.Error(),
 			)
 			return
@@ -933,7 +933,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	b, err := dynamic.ToJSON(plan.Body)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			`Error to marshal "body"`,
+			`marshaling "body"`,
 			err.Error(),
 		)
 		return
@@ -962,7 +962,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	response, err := c.Create(ctx, plan.Path.ValueString(), string(b), *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call create",
+			"calling create API",
 			err.Error(),
 		)
 		return
@@ -1069,7 +1069,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 		response, err := c.Read(ctx, pr.Path.ValueString(), *opt)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error to call post-create read",
+				"calling post-create read API",
 				err.Error(),
 			)
 			return
@@ -1206,7 +1206,7 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 	response, err := c.Read(ctx, state.ID.ValueString(), *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call read",
+			"calling read API",
 			err.Error(),
 		)
 		return
@@ -1479,7 +1479,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Update failure",
-			fmt.Sprintf("Error to marshal state body: %v", err),
+			fmt.Sprintf("marshaling state body: %v", err),
 		)
 		return
 	}
@@ -1487,7 +1487,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Update failure",
-			fmt.Sprintf("Error to marshal plan body: %v", err),
+			fmt.Sprintf("marshaling plan body: %v", err),
 		)
 		return
 	}
@@ -1587,7 +1587,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Update failure",
-					fmt.Sprintf("Error to marshal state body: %v", err),
+					fmt.Sprintf("marshaling state body: %v", err),
 				)
 				return
 			}
@@ -1625,7 +1625,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 		response, err := c.Update(ctx, path, string(planBody), *opt)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error to call update",
+				"calling update API",
 				err.Error(),
 			)
 			return
@@ -1803,7 +1803,7 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 	response, err := c.Delete(ctx, path, body, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call delete",
+			"calling delete API",
 			err.Error(),
 		)
 		return

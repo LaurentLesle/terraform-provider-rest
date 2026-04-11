@@ -307,7 +307,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		body, err = dynamic.ToJSON(config.Body)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Error to convert body",
+				"converting request body",
 				err.Error(),
 			)
 			return
@@ -317,7 +317,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	response, err := c.ReadDS(ctx, config.ID.ValueString(), body, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call Read",
+			"calling read API",
 			err.Error(),
 		)
 		return
