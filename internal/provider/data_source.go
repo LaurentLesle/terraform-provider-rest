@@ -349,7 +349,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 				return
 			}
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("`selector` failed to select from the response"),
+				"`selector` failed to select from the response",
 				string(response.Body()),
 			)
 			return

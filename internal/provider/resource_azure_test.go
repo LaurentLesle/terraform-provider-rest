@@ -44,7 +44,6 @@ func (d azureData) precheck(t *testing.T) {
 	if d.clientSecret == "" {
 		t.Skipf("%q is not specified", RESTFUL_AZURE_CLIENT_SECRET)
 	}
-	return
 }
 
 func newAzureData() azureData {

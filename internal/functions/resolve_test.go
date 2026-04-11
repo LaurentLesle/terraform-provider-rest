@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -38,7 +39,7 @@ func TestWalkDynamic_NestedObject(t *testing.T) {
 	}
 
 	outer, diags := types.ObjectValue(
-		map[string]attr.Type{"rg1": inner.Type(nil)},
+		map[string]attr.Type{"rg1": inner.Type(context.TODO())},
 		map[string]attr.Value{"rg1": inner},
 	)
 	if diags.HasError() {

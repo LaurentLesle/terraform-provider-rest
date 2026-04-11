@@ -723,7 +723,7 @@ func doGET(client *http.Client, url, scheme, token string) error {
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, httpResp.Body)
 
 	switch {
@@ -752,7 +752,7 @@ func fetchJSON(client *http.Client, url, scheme, token string) (map[string]inter
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {

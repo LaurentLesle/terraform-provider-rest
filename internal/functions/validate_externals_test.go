@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -995,7 +996,7 @@ func TestDoGET_ServerError(t *testing.T) {
 func TestFetchJSON_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"name":"test","location":"westeurope"}`)
+		_, _ = fmt.Fprint(w, `{"name":"test","location":"westeurope"}`)
 	}))
 	defer srv.Close()
 
@@ -1129,7 +1130,7 @@ func TestValidateAndEnrich_NoSchema(t *testing.T) {
 	}
 
 	catObj, diags := types.ObjectValue(
-		map[string]attr.Type{"rg1": entryObj.Type(nil)},
+		map[string]attr.Type{"rg1": entryObj.Type(context.TODO())},
 		map[string]attr.Value{"rg1": entryObj},
 	)
 	if diags.HasError() {
@@ -1137,7 +1138,7 @@ func TestValidateAndEnrich_NoSchema(t *testing.T) {
 	}
 
 	externals, diags := types.ObjectValue(
-		map[string]attr.Type{"resource_groups": catObj.Type(nil)},
+		map[string]attr.Type{"resource_groups": catObj.Type(context.TODO())},
 		map[string]attr.Value{"resource_groups": catObj},
 	)
 	if diags.HasError() {
@@ -1160,7 +1161,7 @@ func TestValidateAndEnrich_WithHTTPEnrichment(t *testing.T) {
 	// Set up mock API server
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"name":"rg-test","location":"westeurope","properties":{"provisioningState":"Succeeded"}}`)
+		_, _ = fmt.Fprint(w, `{"name":"rg-test","location":"westeurope","properties":{"provisioningState":"Succeeded"}}`)
 	}))
 	defer srv.Close()
 
@@ -1197,8 +1198,8 @@ func TestValidateAndEnrich_WithHTTPEnrichment(t *testing.T) {
 
 	catObj, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"_schema": schemaObj.Type(nil),
-			"rg1":     entryObj.Type(nil),
+			"_schema": schemaObj.Type(context.TODO()),
+			"rg1":     entryObj.Type(context.TODO()),
 		},
 		map[string]attr.Value{
 			"_schema": schemaObj,
@@ -1210,7 +1211,7 @@ func TestValidateAndEnrich_WithHTTPEnrichment(t *testing.T) {
 	}
 
 	externals, diags := types.ObjectValue(
-		map[string]attr.Type{"resource_groups": catObj.Type(nil)},
+		map[string]attr.Type{"resource_groups": catObj.Type(context.TODO())},
 		map[string]attr.Value{"resource_groups": catObj},
 	)
 	if diags.HasError() {
@@ -1272,8 +1273,8 @@ func TestValidateAndEnrich_StructuralError(t *testing.T) {
 
 	catObj, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"_schema": schemaObj.Type(nil),
-			"entry1":  entryObj.Type(nil),
+			"_schema": schemaObj.Type(context.TODO()),
+			"entry1":  entryObj.Type(context.TODO()),
 		},
 		map[string]attr.Value{
 			"_schema": schemaObj,
@@ -1285,7 +1286,7 @@ func TestValidateAndEnrich_StructuralError(t *testing.T) {
 	}
 
 	externals, diags := types.ObjectValue(
-		map[string]attr.Type{"subs": catObj.Type(nil)},
+		map[string]attr.Type{"subs": catObj.Type(context.TODO())},
 		map[string]attr.Value{"subs": catObj},
 	)
 	if diags.HasError() {

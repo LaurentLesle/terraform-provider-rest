@@ -20,7 +20,7 @@ func (v stringsIsPathBuilder) MarkdownDescription(ctx context.Context) string {
 	return "Ensure this is a path builder expression."
 }
 
-func (_ stringsIsPathBuilder) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (stringsIsPathBuilder) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	str := req.ConfigValue
 
 	if str.IsUnknown() || str.IsNull() {
@@ -44,7 +44,7 @@ func (_ stringsIsPathBuilder) ValidateString(ctx context.Context, req validator.
 						return diag.NewAttributeErrorDiagnostic(
 							req.Path,
 							"Invalid String",
-							fmt.Sprintf("value isn't a body reference"),
+							"value isn't a body reference",
 						)
 					}
 				}

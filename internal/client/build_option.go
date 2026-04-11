@@ -24,7 +24,7 @@ import (
 type BuildOption struct {
 	Security      SecurityOption
 	CookieEnabled bool
-	TLSConfig     tls.Config
+	TLSConfig     *tls.Config
 	Retry         *RetryOption
 }
 
@@ -194,8 +194,8 @@ func DebugLog(format string, args ...interface{}) {
 		log.Printf(format, args...)
 		return
 	}
-	defer f.Close()
-	fmt.Fprintf(f, format+"\n", args...)
+	defer func() { _ = f.Close() }()
+	_, _ = fmt.Fprintf(f, format+"\n", args...)
 }
 
 func (opt OAuth2RefreshTokenOption) configureClient(_ context.Context, client *resty.Client) error {
@@ -329,7 +329,7 @@ func retrieveTokenWithScopes(ctx context.Context, tokenURL string, v url.Values)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

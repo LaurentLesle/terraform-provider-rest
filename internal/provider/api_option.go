@@ -212,7 +212,7 @@ func (opt apiOption) ForPrecheck(ctx context.Context, defaultPath string, defaul
 		return nil, diags
 	}
 
-	var query url.Values = url.Values(defaultQuery)
+	query := url.Values(defaultQuery)
 	if !d.Query.IsNull() {
 		var q url.Values
 		if d := d.Query.ElementsAs(ctx, &q, false); d.HasError() {

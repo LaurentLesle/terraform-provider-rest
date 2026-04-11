@@ -366,7 +366,7 @@ func pullOCIChart(ctx context.Context, chartRef string, version string) (*chart.
 	if err != nil {
 		return nil, fmt.Errorf("fetching chart layer: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	return loader.LoadArchive(rc)
 }
@@ -397,10 +397,10 @@ func (r *HelmReleaseResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	if !model.Repository.IsNull() && !model.Repository.IsUnknown() {
-		install.ChartPathOptions.RepoURL = model.Repository.ValueString()
+		install.RepoURL = model.Repository.ValueString()
 	}
 	if !model.Version.IsNull() && !model.Version.IsUnknown() {
-		install.ChartPathOptions.Version = model.Version.ValueString()
+		install.Version = model.Version.ValueString()
 	}
 
 	ch, err := locateAndLoadChart(ctx, model.Chart.ValueString(), &install.ChartPathOptions, settings)
@@ -484,10 +484,10 @@ func (r *HelmReleaseResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if !model.Repository.IsNull() && !model.Repository.IsUnknown() {
-		upgrade.ChartPathOptions.RepoURL = model.Repository.ValueString()
+		upgrade.RepoURL = model.Repository.ValueString()
 	}
 	if !model.Version.IsNull() && !model.Version.IsUnknown() {
-		upgrade.ChartPathOptions.Version = model.Version.ValueString()
+		upgrade.Version = model.Version.ValueString()
 	}
 
 	ch, err := locateAndLoadChart(ctx, model.Chart.ValueString(), &upgrade.ChartPathOptions, settings)

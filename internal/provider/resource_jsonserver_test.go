@@ -28,7 +28,6 @@ func (d jsonServerData) precheck(t *testing.T) {
 	if d.url == "" {
 		t.Skipf("%q is not specified", RESTFUL_JSON_SERVER_URL)
 	}
-	return
 }
 
 func (d jsonServerData) precheckMigrate(t *testing.T) {
@@ -36,7 +35,6 @@ func (d jsonServerData) precheckMigrate(t *testing.T) {
 	if _, ok := os.LookupEnv(RESTFUL_MIGRATE_TEST); !ok {
 		t.Skipf("%q is not specified", RESTFUL_MIGRATE_TEST)
 	}
-	return
 }
 
 func newJsonServerData() jsonServerData {

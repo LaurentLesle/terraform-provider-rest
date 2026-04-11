@@ -608,7 +608,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 		// Fallback: check private state for auth_ref persisted by ModifyPlan.
 		// Handles pre-existing resources whose state was written before auth_ref existed.
 		if raw, diags := req.Private.GetKey(ctx, "auth_ref"); !diags.HasError() && len(raw) > 0 {
-			json.Unmarshal(raw, &authRef)
+			_ = json.Unmarshal(raw, &authRef)
 		}
 	}
 	c, err := r.p.ClientForAuthRef(authRef)

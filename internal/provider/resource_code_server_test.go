@@ -37,7 +37,7 @@ func TestResource_CodeServer_ObjectArray(t *testing.T) {
 		switch r.Method {
 		case "PUT":
 			b, _ := io.ReadAll(r.Body)
-			r.Body.Close()
+			_ = r.Body.Close()
 			obj = &object{b: b, id: r.URL.String()}
 			return
 		case "GET":
@@ -45,11 +45,10 @@ func TestResource_CodeServer_ObjectArray(t *testing.T) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			w.Write(obj.b)
+			_, _ = w.Write(obj.b)
 			return
 		case "DELETE":
 			obj = nil
-			return
 		}
 	}))
 	d := codeServerData{}
@@ -104,22 +103,21 @@ func TestResource_CodeServer_CreateRetString(t *testing.T) {
 		switch r.Method {
 		case "PUT":
 			b, _ := io.ReadAll(r.Body)
-			r.Body.Close()
+			_ = r.Body.Close()
 			r.URL.Path, _ = url.JoinPath(r.URL.Path, id)
 			obj = &object{b: b, id: r.URL.String()}
 			ret, _ := json.Marshal(id)
-			w.Write([]byte(ret))
+			_, _ = w.Write([]byte(ret))
 			return
 		case "GET":
 			if obj == nil || r.URL.String() != obj.id {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			w.Write(obj.b)
+			_, _ = w.Write(obj.b)
 			return
 		case "DELETE":
 			obj = nil
-			return
 		}
 	}))
 	d := codeServerData{}
@@ -160,8 +158,7 @@ func TestResource_CodeServer_RetFullURL(t *testing.T) {
 		resp := []byte(fmt.Sprintf(`{"self": "%s/tests/%d"}`, srv.URL, idx))
 		objs[idx] = object{b: resp}
 		idx++
-		w.Write(resp)
-		return
+		_, _ = w.Write(resp)
 	})
 	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
@@ -170,14 +167,12 @@ func TestResource_CodeServer_RetFullURL(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		w.Write(obj.b)
-		return
+		_, _ = w.Write(obj.b)
 	})
 	mux.HandleFunc("DELETE /{id}", func(w http.ResponseWriter, r *http.Request) {
 		idStr := filepath.Base(r.URL.Path)
 		id, _ := strconv.Atoi(idStr)
 		delete(objs, id)
-		return
 	})
 	srv.Start()
 	d := codeServerData{}
@@ -207,7 +202,6 @@ func TestResource_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "create" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	mux.HandleFunc("PUT /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "update" {
@@ -216,7 +210,6 @@ func TestResource_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "update" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "read" {
@@ -225,8 +218,7 @@ func TestResource_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "read" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		w.Write([]byte(`{}`))
-		return
+		_, _ = w.Write([]byte(`{}`))
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "delete" {
@@ -235,7 +227,6 @@ func TestResource_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "delete" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	srv.Start()
 	d := codeServerData{}
@@ -267,8 +258,7 @@ func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		body, _ = io.ReadAll(r.Body)
-		w.Write(body)
-		return
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("PUT /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "update_b" {
@@ -277,7 +267,6 @@ func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
 		if r.URL.Query().Get("type") != "update_b" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "read_b" {
@@ -286,8 +275,7 @@ func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
 		if r.URL.Query().Get("type") != "read_b" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		w.Write(body)
-		return
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "delete_b" {
@@ -296,7 +284,6 @@ func TestResource_CodeServer_HeaderQueryFromBody(t *testing.T) {
 		if r.URL.Query().Get("type") != "delete_b" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	srv.Start()
 	d := codeServerData{}
@@ -320,7 +307,6 @@ func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
 	mux := http.NewServeMux()
 	srv := httptest.NewUnstartedServer(mux)
 	mux.HandleFunc("PUT /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		return
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		// From https://github.com/LaurentLesle/terraform-provider-rest/issues/130
@@ -330,11 +316,9 @@ func TestResource_CodeServer_ReadResponseTemplate(t *testing.T) {
       "value": "testing-system"
    }
 ]`)
-		w.Write(b)
-		return
+		_, _ = w.Write(b)
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		return
 	})
 	srv.Start()
 	d := codeServerData{}
@@ -377,8 +361,7 @@ func TestResource_CodeServer_DeleteMethodBody(t *testing.T) {
 		state = b
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(state)
-		return
+		_, _ = w.Write(state)
 	})
 	mux.HandleFunc("PATCH /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		b, err := io.ReadAll(r.Body)
@@ -454,34 +437,32 @@ func TestResource_CodeServer_DeleteMethodBodyRaw(t *testing.T) {
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 		var m map[string]interface{}
 		if err := json.Unmarshal(b, &m); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 		m["id"] = myid
 		state, _ = json.Marshal(m)
 	})
 	mux.HandleFunc("GET /tests/1", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(state)
-		return
+		_, _ = w.Write(state)
 	})
 	mux.HandleFunc("PATCH /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 		state, err = jsonpatch.MergePatch(state, b)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("%s: %s", string(b), []byte(err.Error()))))
-			return
+			_, _ = fmt.Fprintf(w, "%s: %s", string(b), err.Error())
 		}
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
