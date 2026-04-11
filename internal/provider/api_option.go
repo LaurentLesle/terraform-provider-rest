@@ -24,11 +24,33 @@ type apiOption struct {
 }
 
 func (opt apiOption) ForResourceCreate(ctx context.Context, d resourceData) (*client.CreateOption, diag.Diagnostics) {
-	out := client.CreateOption{
-		Method: opt.CreateMethod,
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query).TakeOrSelf(ctx, d.CreateQuery),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header).MergeOrSelf(ctx, d.EphemeralHeader).TakeOrSelf(ctx, d.CreateHeader),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
+	q, dd = q.TakeOrSelf(ctx, d.CreateQuery)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, d.EphemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeOrSelf(ctx, d.CreateHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	out := client.CreateOption{Method: opt.CreateMethod, Query: q, Header: h}
 	if !d.CreateMethod.IsUnknown() && !d.CreateMethod.IsNull() {
 		out.Method = d.CreateMethod.ValueString()
 	}
@@ -37,29 +59,97 @@ func (opt apiOption) ForResourceCreate(ctx context.Context, d resourceData) (*cl
 }
 
 func (opt apiOption) ForResourceRead(ctx context.Context, d resourceData, body []byte) (*client.ReadOption, diag.Diagnostics) {
-	out := client.ReadOption{
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query).TakeWithExparamOrSelf(ctx, d.ReadQuery, body),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header).MergeOrSelf(ctx, d.EphemeralHeader).TakeWithExparamOrSelf(ctx, d.ReadHeader, body),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	q, dd = q.TakeWithExparamOrSelf(ctx, d.ReadQuery, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
-	return &out, nil
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, d.EphemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeWithExparamOrSelf(ctx, d.ReadHeader, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	return &client.ReadOption{Query: q, Header: h}, nil
 }
 
 func (opt apiOption) ForResourcePostCreateRead(ctx context.Context, d resourceData, pr postCreateRead, body []byte) (*client.ReadOption, diag.Diagnostics) {
-	out := client.ReadOption{
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query).TakeWithExparamOrSelf(ctx, pr.Query, body),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header).MergeOrSelf(ctx, d.EphemeralHeader).TakeWithExparamOrSelf(ctx, pr.Header, body),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	q, dd = q.TakeWithExparamOrSelf(ctx, pr.Query, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
-	return &out, nil
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, d.EphemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeWithExparamOrSelf(ctx, pr.Header, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	return &client.ReadOption{Query: q, Header: h}, nil
 }
 
 func (opt apiOption) ForResourceUpdate(ctx context.Context, d resourceData, body []byte) (*client.UpdateOption, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	q, dd = q.TakeWithExparamOrSelf(ctx, d.UpdateQuery, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, d.EphemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeWithExparamOrSelf(ctx, d.UpdateHeader, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
 	out := client.UpdateOption{
 		Method:             opt.UpdateMethod,
 		MergePatchDisabled: opt.MergePatchDisabled,
-		Query:              opt.Query.Clone().TakeOrSelf(ctx, d.Query).TakeWithExparamOrSelf(ctx, d.UpdateQuery, body),
-		Header:             opt.Header.Clone().TakeOrSelf(ctx, d.Header).MergeOrSelf(ctx, d.EphemeralHeader).TakeWithExparamOrSelf(ctx, d.UpdateHeader, body),
+		Query:              q,
+		Header:             h,
 	}
 	if !d.UpdateMethod.IsUnknown() && !d.UpdateMethod.IsNull() {
 		out.Method = d.UpdateMethod.ValueString()
@@ -72,12 +162,33 @@ func (opt apiOption) ForResourceUpdate(ctx context.Context, d resourceData, body
 }
 
 func (opt apiOption) ForResourceDelete(ctx context.Context, d resourceData, body []byte) (*client.DeleteOption, diag.Diagnostics) {
-	out := client.DeleteOption{
-		Method: opt.DeleteMethod,
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query).TakeWithExparamOrSelf(ctx, d.DeleteQuery, body),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header).MergeOrSelf(ctx, d.EphemeralHeader).TakeWithExparamOrSelf(ctx, d.DeleteHeader, body),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	q, dd = q.TakeWithExparamOrSelf(ctx, d.DeleteQuery, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, d.EphemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeWithExparamOrSelf(ctx, d.DeleteHeader, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	out := client.DeleteOption{Method: opt.DeleteMethod, Query: q, Header: h}
 	if !d.DeleteMethod.IsUnknown() && !d.DeleteMethod.IsNull() {
 		out.Method = d.DeleteMethod.ValueString()
 	}
@@ -86,33 +197,69 @@ func (opt apiOption) ForResourceDelete(ctx context.Context, d resourceData, body
 }
 
 func (opt apiOption) ForDataSourceRead(ctx context.Context, d dataSourceData) (*client.ReadOptionDS, diag.Diagnostics) {
-	out := client.ReadOptionDS{
-		Method: d.Method.ValueString(),
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
-	return &out, nil
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	return &client.ReadOptionDS{Method: d.Method.ValueString(), Query: q, Header: h}, nil
 }
 
 func (opt apiOption) ForOperation(ctx context.Context, method basetypes.StringValue, defQuery, defHeader basetypes.MapValue, ephemeralHeader basetypes.MapValue, ovQuery, ovHeader basetypes.MapValue, body []byte) (*client.OperationOption, diag.Diagnostics) {
-	out := client.OperationOption{
-		Method: method.ValueString(),
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, defQuery).TakeWithExparamOrSelf(ctx, ovQuery, body),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, defHeader).MergeOrSelf(ctx, ephemeralHeader).TakeWithExparamOrSelf(ctx, ovHeader, body),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, defQuery)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	q, dd = q.TakeWithExparamOrSelf(ctx, ovQuery, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
-	return &out, nil
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, defHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.MergeOrSelf(ctx, ephemeralHeader)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+	h, dd = h.TakeWithExparamOrSelf(ctx, ovHeader, body)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	return &client.OperationOption{Method: method.ValueString(), Query: q, Header: h}, nil
 }
 
 func (opt apiOption) ForListResourceRead(ctx context.Context, d ListResourceData) (*client.ReadOptionLR, diag.Diagnostics) {
-	out := client.ReadOptionLR{
-		Method: d.Method.ValueString(),
-		Query:  opt.Query.Clone().TakeOrSelf(ctx, d.Query),
-		Header: opt.Header.Clone().TakeOrSelf(ctx, d.Header),
+	var diags diag.Diagnostics
+
+	q := opt.Query.Clone()
+	q, dd := q.TakeOrSelf(ctx, d.Query)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
 	}
 
-	return &out, nil
+	h := opt.Header.Clone()
+	h, dd = h.TakeOrSelf(ctx, d.Header)
+	if diags.Append(dd...); diags.HasError() {
+		return nil, diags
+	}
+
+	return &client.ReadOptionLR{Method: d.Method.ValueString(), Query: q, Header: h}, nil
 }
 
 func (opt apiOption) ForPoll(ctx context.Context, defaultHeader client.Header, defaultQuery client.Query, d pollData, body basetypes.DynamicValue) (*client.PollOption, diag.Diagnostics) {
@@ -148,7 +295,11 @@ func (opt apiOption) ForPoll(ctx context.Context, defaultHeader client.Header, d
 
 	header := defaultHeader
 	if !d.Header.IsNull() {
-		header = header.Clone().TakeOrSelf(ctx, d.Header)
+		var dd diag.Diagnostics
+		header, dd = header.Clone().TakeOrSelf(ctx, d.Header)
+		if diags.Append(dd...); diags.HasError() {
+			return nil, diags
+		}
 	}
 
 	defaultSec := defaults.PollDefaultDelayInSec
