@@ -16,7 +16,7 @@ const (
 )
 
 func GetExpiryTime(typ, loc, unit, ahead string, resp resty.Response) (time.Time, error) {
-	locator, err := expandValueLocator(loc)
+	locator, err := expandValueLocator(loc, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
