@@ -106,11 +106,7 @@ func NewPollableForPoll(resp resty.Response, opt PollOption) (*Pollable, error) 
 	}
 	p.StatusLocator = opt.StatusLocator
 
-	if dur := resp.Header().Get("Retry-After"); dur != "" {
-		d, err := time.ParseDuration(dur + "s")
-		if err != nil {
-			return nil, fmt.Errorf("invalid Retry-After value in the initiated response: %s", dur)
-		}
+	if d, ok := parseRetryAfterValue(resp.Header().Get("Retry-After")); ok {
 		p.InitDelay = d
 	} else {
 		p.InitDelay = opt.DefaultDelay
@@ -224,16 +220,11 @@ PollingLoop:
 
 		for _, ps := range f.Status.Pending {
 			if strings.EqualFold(status, ps) {
-				dur := resp.Header().Get("Retry-After")
-				if dur == "" {
+				if d, ok := parseRetryAfterValue(resp.Header().Get("Retry-After")); ok {
+					time.Sleep(d)
+				} else {
 					time.Sleep(f.DefaultDelay)
-					continue PollingLoop
 				}
-				d, err := time.ParseDuration(dur + "s")
-				if err != nil {
-					return fmt.Errorf("invalid Retry-After value in the initiated response: %s", dur)
-				}
-				time.Sleep(d)
 				continue PollingLoop
 			}
 		}

@@ -412,7 +412,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Open operation API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}
@@ -648,7 +648,7 @@ func (e *EphemeralResource) Renew(ctx context.Context, req ephemeral.RenewReques
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Renew operation API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}
@@ -718,7 +718,7 @@ func (e *EphemeralResource) Close(ctx context.Context, req ephemeral.CloseReques
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Close operation API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}

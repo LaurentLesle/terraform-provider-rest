@@ -40,10 +40,11 @@ var _ provider.ProviderWithFunctions = &Provider{}
 var _ tffwdocs.ProviderWithRenderOption = &Provider{}
 
 type Provider struct {
-	client    *client.Client
-	apiOpt    apiOption
-	once      sync.Once
-	refConfig *RefConfig // ref-resolver tokens, populated by Configure
+	client       *client.Client
+	namedClients map[string]*client.Client // named_auth → per-key independent client
+	apiOpt       apiOption
+	once         sync.Once
+	refConfig    *RefConfig // ref-resolver tokens, populated by Configure
 }
 
 // RefConfig holds tokens for validate_externals and related functions.
@@ -64,6 +65,7 @@ type providerConfig struct {
 	BaseURL            types.String `tfsdk:"base_url"`
 	Client             types.Object `tfsdk:"client"`
 	Security           types.Object `tfsdk:"security"`
+	NamedAuth          types.Map    `tfsdk:"named_auth"`
 	CreateMethod       types.String `tfsdk:"create_method"`
 	UpdateMethod       types.String `tfsdk:"update_method"`
 	DeleteMethod       types.String `tfsdk:"delete_method"`
@@ -672,6 +674,15 @@ func (*Provider) Schema(ctx context.Context, req provider.SchemaRequest, resp *p
 					},
 				},
 			},
+			"named_auth": schema.MapNestedAttribute{
+				Description:         "Named authentication configurations. Each entry creates an independent HTTP client with its own auth transport. Resources select an entry via `auth_ref`.",
+				MarkdownDescription: "Named authentication configurations. Each entry creates an independent HTTP client with its own auth transport. Resources select an entry via `auth_ref`.",
+				Optional:            true,
+				Sensitive:           true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: namedAuthSecurityAttributes(),
+				},
+			},
 			"create_method": schema.StringAttribute{
 				Description:         "The method used to create the resource. Defaults to `POST`.",
 				MarkdownDescription: "The method used to create the resource. Defaults to `POST`.",
@@ -886,6 +897,42 @@ func (p *Provider) Init(ctx context.Context, config providerConfig) diag.Diagnos
 			}
 			p.apiOpt.Header = headers
 		}
+
+		// Build named auth clients — each entry gets its own independent
+		// *client.Client with its own auth transport (oauth2, http token, etc.).
+		if !config.NamedAuth.IsNull() && !config.NamedAuth.IsUnknown() {
+			p.namedClients = make(map[string]*client.Client, len(config.NamedAuth.Elements()))
+			for name, entryRaw := range config.NamedAuth.Elements() {
+				entryObj := entryRaw.(types.Object)
+				security, secDiags := populateSecurity(ctx, entryObj)
+				if secDiags.HasError() {
+					odiags = secDiags
+					return
+				}
+				if security == nil {
+					continue
+				}
+				namedOpt := &client.BuildOption{
+					Security:      security,
+					TLSConfig:     clientOpt.TLSConfig,
+					CookieEnabled: clientOpt.CookieEnabled,
+				}
+				if clientOpt.Retry != nil {
+					namedOpt.Retry = clientOpt.Retry
+				}
+				namedClient, namedErr := client.New(ctx, config.BaseURL.ValueString(), namedOpt)
+				if namedErr != nil {
+					var d diag.Diagnostics
+					d.AddError(
+						"Failed to configure named_auth",
+						fmt.Sprintf("Failed to create client for named_auth %q: %v", name, namedErr),
+					)
+					odiags = d
+					return
+				}
+				p.namedClients[name] = namedClient
+			}
+		}
 	})
 
 	return odiags
@@ -1028,6 +1075,149 @@ func populateRetry(ctx context.Context, retryObj basetypes.ObjectValue) (*client
 		WaitTime:    waitTime,
 		MaxWaitTime: maxWaitTime,
 	}, nil
+}
+
+// namedAuthSecurityAttributes returns the security attribute schema for each
+// named_auth entry. Same structure as the top-level "security" block but
+// without cross-field validators that reference absolute paths.
+func namedAuthSecurityAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"http": schema.SingleNestedAttribute{
+			Description: "Configuration for the HTTP authentication scheme.",
+			Optional:    true,
+			Attributes: map[string]schema.Attribute{
+				"basic": schema.SingleNestedAttribute{
+					Description: "Basic authentication",
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"username": schema.StringAttribute{
+							Description: "The username.",
+							Required:    true,
+						},
+						"password": schema.StringAttribute{
+							Description: "The password.",
+							Required:    true,
+							Sensitive:   true,
+						},
+					},
+				},
+				"token": schema.SingleNestedAttribute{
+					Description: "Auth token (e.g. Bearer).",
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"token": schema.StringAttribute{
+							Description: "The value of the token.",
+							Required:    true,
+							Sensitive:   true,
+						},
+						"scheme": schema.StringAttribute{
+							Description: "The auth scheme. Defaults to `Bearer`.",
+							Optional:    true,
+						},
+					},
+				},
+			},
+		},
+		"apikey": schema.SetNestedAttribute{
+			Description: "Configuration for the API Key authentication scheme.",
+			Optional:    true,
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Description: "The API Key name",
+						Required:    true,
+					},
+					"value": schema.StringAttribute{
+						Description: "The API Key value",
+						Required:    true,
+					},
+					"in": schema.StringAttribute{
+						Description: "Specifies how is the API Key is sent.",
+						Required:    true,
+						Validators: []validator.String{
+							stringvalidator.OneOf(
+								string(client.APIKeyAuthInHeader),
+								string(client.APIKeyAuthInQuery),
+								string(client.APIKeyAuthInCookie),
+							),
+						},
+					},
+				},
+			},
+		},
+		"oauth2": schema.SingleNestedAttribute{
+			Description: "Configuration for the OAuth2 authentication scheme.",
+			Optional:    true,
+			Attributes: map[string]schema.Attribute{
+				"password": schema.SingleNestedAttribute{
+					Description: "Resource owner password credential.",
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"token_url":     schema.StringAttribute{Description: "The token URL to be used for this flow.", Required: true},
+						"username":      schema.StringAttribute{Description: "The username.", Required: true},
+						"password":      schema.StringAttribute{Description: "The password.", Required: true, Sensitive: true},
+						"client_id":     schema.StringAttribute{Description: "The application's ID.", Optional: true},
+						"client_secret": schema.StringAttribute{Description: "The application's secret.", Optional: true, Sensitive: true},
+						"scopes":        schema.ListAttribute{ElementType: types.StringType, Description: "The optional requested permissions.", Optional: true},
+						"in": schema.StringAttribute{
+							Description: "Specifies how is the client ID & secret sent.",
+							Optional:    true,
+							Validators:  []validator.String{stringvalidator.OneOf(string(client.OAuth2AuthStyleInParams), string(client.OAuth2AuthStyleInHeader))},
+						},
+					},
+				},
+				"client_credentials": schema.SingleNestedAttribute{
+					Description: "Client credentials.",
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"token_url":      schema.StringAttribute{Description: "The token URL to be used for this flow.", Required: true},
+						"client_id":      schema.StringAttribute{Description: "The application's ID.", Required: true},
+						"client_secret":  schema.StringAttribute{Description: "The application's secret.", Required: true, Sensitive: true},
+						"scopes":         schema.ListAttribute{ElementType: types.StringType, Description: "The optional requested permissions.", Optional: true},
+						"endpoint_params": schema.MapAttribute{ElementType: types.ListType{ElemType: types.StringType}, Description: "The additional parameters for requests to the token endpoint.", Optional: true},
+						"in": schema.StringAttribute{
+							Description: "Specifies how is the client ID & secret sent.",
+							Optional:    true,
+							Validators:  []validator.String{stringvalidator.OneOf(string(client.OAuth2AuthStyleInParams), string(client.OAuth2AuthStyleInHeader))},
+						},
+					},
+				},
+				"refresh_token": schema.SingleNestedAttribute{
+					Description: "Refresh token.",
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"token_url":      schema.StringAttribute{Description: "The token URL to be used for this flow.", Required: true},
+						"refresh_token":  schema.StringAttribute{Description: "The refresh token.", Required: true, Sensitive: true},
+						"client_id":      schema.StringAttribute{Description: "The application's ID.", Optional: true},
+						"client_secret":  schema.StringAttribute{Description: "The application's secret.", Optional: true, Sensitive: true},
+						"scopes":         schema.ListAttribute{ElementType: types.StringType, Description: "The optional requested permissions.", Optional: true},
+						"token_type":     schema.StringAttribute{Description: `The type of the access token. Defaults to "Bearer".`, Optional: true},
+						"in": schema.StringAttribute{
+							Description: "Specifies how is the client ID & secret sent.",
+							Optional:    true,
+							Validators:  []validator.String{stringvalidator.OneOf(string(client.OAuth2AuthStyleInParams), string(client.OAuth2AuthStyleInHeader))},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// ClientForAuthRef returns the named client for the given auth_ref key.
+// If authRef is empty, the default provider client is returned.
+func (p *Provider) ClientForAuthRef(authRef string) (*client.Client, error) {
+	if authRef == "" {
+		return p.client, nil
+	}
+	if p.namedClients == nil {
+		return nil, fmt.Errorf("auth_ref %q specified but no named_auth is configured", authRef)
+	}
+	c, ok := p.namedClients[authRef]
+	if !ok {
+		return nil, fmt.Errorf("auth_ref %q not found in named_auth configuration", authRef)
+	}
+	return c, nil
 }
 
 func populateSecurity(ctx context.Context, secRaw basetypes.ObjectValue) (client.SecurityOption, diag.Diagnostics) {

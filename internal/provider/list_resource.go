@@ -190,7 +190,7 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 	if !response.IsSuccess() && response.StatusCode() != http.StatusNotFound {
 		stream.Results = list.ListResultsStreamDiagnostics(diag.Diagnostics{diag.NewErrorDiagnostic(
 			fmt.Sprintf("Read API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)})
 		return
 	}
