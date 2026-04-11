@@ -139,7 +139,7 @@ func New(ctx context.Context, baseURL string, opt *BuildOption) (*Client, error)
 		opt = &BuildOption{}
 	}
 
-	transport := http.DefaultTransport.(*http.Transport)
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = opt.TLSConfig
 	httpClient := &http.Client{
 		Transport: transport,
