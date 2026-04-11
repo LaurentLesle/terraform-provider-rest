@@ -941,6 +941,7 @@ func (p *Provider) Init(ctx context.Context, config providerConfig) diag.Diagnos
 func (c clientData) ToClientBuildOption(ctx context.Context) (*client.BuildOption, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var clientOpt client.BuildOption
+	clientOpt.TLSConfig = &tls.Config{}
 
 	clientOpt.TLSConfig.InsecureSkipVerify = c.TlsInsecureSkipVerify.ValueBool()
 

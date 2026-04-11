@@ -24,7 +24,7 @@ import (
 type BuildOption struct {
 	Security      SecurityOption
 	CookieEnabled bool
-	TLSConfig     tls.Config
+	TLSConfig     *tls.Config
 	Retry         *RetryOption
 }
 

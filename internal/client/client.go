@@ -140,7 +140,7 @@ func New(ctx context.Context, baseURL string, opt *BuildOption) (*Client, error)
 	}
 
 	transport := http.DefaultTransport.(*http.Transport)
-	transport.TLSClientConfig = &opt.TLSConfig
+	transport.TLSClientConfig = opt.TLSConfig
 	httpClient := &http.Client{
 		Transport: transport,
 	}
