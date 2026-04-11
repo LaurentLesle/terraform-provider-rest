@@ -222,12 +222,11 @@ func resolveInterpolatedRef(ctxMap attr.Value, s string) (attr.Value, error) {
 		result.WriteString(remaining[:start])
 
 		inner := remaining[start+2:] // skip "${"
-		end := strings.Index(inner, "}")
-		if end < 0 {
+		refExpr, after, ok := strings.Cut(inner, "}")
+		if !ok {
 			return nil, fmt.Errorf("unterminated ${ref:...} in %q", s)
 		}
 
-		refExpr := inner[:end] // "ref:path" or "ref:path|default"
 		resolved, err := resolveSingleRef(ctxMap, refExpr)
 		if err != nil {
 			return nil, fmt.Errorf("interpolation in %q: %w", s, err)
@@ -239,7 +238,7 @@ func resolveInterpolatedRef(ctxMap attr.Value, s string) (attr.Value, error) {
 		}
 		result.WriteString(strVal.ValueString())
 
-		remaining = inner[end+1:]
+		remaining = after
 	}
 
 	return types.StringValue(result.String()), nil

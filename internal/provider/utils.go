@@ -35,15 +35,3 @@ func apiErrorDetail(resp *resty.Response) string {
 	detail += "\nAll retries exhausted. Consider increasing `max_wait_in_sec` and/or `count` in the provider's client.retry configuration."
 	return detail
 }
-
-func ToPtr[T any](v T) *T {
-	return &v
-}
-
-func FromPtr[T any](p *T) T {
-	var v T
-	if p != nil {
-		v = *p
-	}
-	return v
-}

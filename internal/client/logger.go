@@ -14,14 +14,14 @@ type tflogger struct {
 
 var _ resty.Logger = tflogger{}
 
-func (t tflogger) Debugf(format string, v ...interface{}) {
+func (t tflogger) Debugf(format string, v ...any) {
 	tflog.Debug(t.ctx, fmt.Sprintf(format, v...))
 }
 
-func (t tflogger) Warnf(format string, v ...interface{}) {
+func (t tflogger) Warnf(format string, v ...any) {
 	tflog.Warn(t.ctx, fmt.Sprintf(format, v...))
 }
 
-func (t tflogger) Errorf(format string, v ...interface{}) {
+func (t tflogger) Errorf(format string, v ...any) {
 	tflog.Error(t.ctx, fmt.Sprintf(format, v...))
 }

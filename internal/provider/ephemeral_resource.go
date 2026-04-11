@@ -384,7 +384,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 		return
 	}
 
-	tflog.Info(ctx, "Open an ephemeral resource", map[string]interface{}{"path": config.Path.ValueString()})
+	tflog.Info(ctx, "Open an ephemeral resource", map[string]any{"path": config.Path.ValueString()})
 
 	opt, diags := e.p.apiOpt.ForOperation(ctx, config.Method, config.Query, config.Header, config.EphemeralHeader, config.OpenQuery, config.OpenHeader, nil)
 	resp.Diagnostics.Append(diags...)
@@ -617,7 +617,7 @@ func (e *EphemeralResource) Renew(ctx context.Context, req ephemeral.RenewReques
 		return
 	}
 
-	tflog.Info(ctx, "Renew an ephemeral resource", map[string]interface{}{"path": pd.Path.ValueString()})
+	tflog.Info(ctx, "Renew an ephemeral resource", map[string]any{"path": pd.Path.ValueString()})
 
 	var output []byte
 	if !pd.Output.IsNull() {
@@ -687,7 +687,7 @@ func (e *EphemeralResource) Close(ctx context.Context, req ephemeral.CloseReques
 		return
 	}
 
-	tflog.Info(ctx, "Close an ephemeral resource", map[string]interface{}{"path": pd.Path.ValueString()})
+	tflog.Info(ctx, "Close an ephemeral resource", map[string]any{"path": pd.Path.ValueString()})
 
 	var output []byte
 	if !pd.Output.IsNull() {

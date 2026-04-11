@@ -2,7 +2,7 @@ package acceptance
 
 import (
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 	"strings"
 	"time"
@@ -31,14 +31,14 @@ func NewRd() Rd {
 
 func randStringFromCharSet(strlen int, charSet string) string {
 	result := make([]byte, strlen)
-	for i := 0; i < strlen; i++ {
+	for i := range strlen {
 		result[i] = charSet[randIntRange(0, len(charSet))]
 	}
 	return string(result)
 }
 
 func randIntRange(min int, max int) int {
-	return rand.Intn(max-min) + min
+	return rand.IntN(max-min) + min
 }
 
 // RandomIntOfLength is a random 8 to 18 digit integer which is unique to this test case

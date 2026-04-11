@@ -372,9 +372,9 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 	plan.EphemeralHeader = config.EphemeralHeader
 
 	if forCreate {
-		tflog.Info(ctx, "Create an operation resource", map[string]interface{}{"id": plan.Path.ValueString()})
+		tflog.Info(ctx, "Create an operation resource", map[string]any{"id": plan.Path.ValueString()})
 	} else {
-		tflog.Info(ctx, "Update an operation resource", map[string]interface{}{"id": plan.ID.ValueString()})
+		tflog.Info(ctx, "Update an operation resource", map[string]any{"id": plan.ID.ValueString()})
 	}
 
 	opt, diags := r.p.apiOpt.ForOperation(ctx, plan.Method, plan.Query, plan.Header, plan.EphemeralHeader, plan.OperationQuery, plan.OperationHeader, nil)
@@ -627,7 +627,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	tflog.Info(ctx, "Delete an operation resource", map[string]interface{}{"id": state.ID.ValueString()})
+	tflog.Info(ctx, "Delete an operation resource", map[string]any{"id": state.ID.ValueString()})
 
 	if state.DeleteMethod.IsNull() {
 		return

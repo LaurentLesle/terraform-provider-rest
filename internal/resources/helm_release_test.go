@@ -11,7 +11,7 @@ import (
 func TestCoerceValue(t *testing.T) {
 	tests := []struct {
 		input string
-		want  interface{}
+		want  any
 	}{
 		{"true", true},
 		{"false", false},
@@ -63,7 +63,7 @@ func TestSplitDotPath_EscapedDot(t *testing.T) {
 // ── setNestedValue ──────────────────────────────────────────────────────────
 
 func TestSetNestedValue_Simple(t *testing.T) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	setNestedValue(m, "key", "value")
 	if m["key"] != "value" {
 		t.Errorf("got %v", m)
@@ -71,13 +71,13 @@ func TestSetNestedValue_Simple(t *testing.T) {
 }
 
 func TestSetNestedValue_Nested(t *testing.T) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	setNestedValue(m, "a.b.c", "deep")
-	a, ok := m["a"].(map[string]interface{})
+	a, ok := m["a"].(map[string]any)
 	if !ok {
 		t.Fatalf("a not a map: %T", m["a"])
 	}
-	b, ok := a["b"].(map[string]interface{})
+	b, ok := a["b"].(map[string]any)
 	if !ok {
 		t.Fatalf("a.b not a map: %T", a["b"])
 	}
@@ -87,7 +87,7 @@ func TestSetNestedValue_Nested(t *testing.T) {
 }
 
 func TestSetNestedValue_BoolCoercion(t *testing.T) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	setNestedValue(m, "enabled", "true")
 	if m["enabled"] != true {
 		t.Errorf("expected true (bool), got %v (%T)", m["enabled"], m["enabled"])
@@ -95,25 +95,25 @@ func TestSetNestedValue_BoolCoercion(t *testing.T) {
 }
 
 func TestSetNestedValue_OverwriteExisting(t *testing.T) {
-	m := map[string]interface{}{
-		"a": map[string]interface{}{
+	m := map[string]any{
+		"a": map[string]any{
 			"b": "old",
 		},
 	}
 	setNestedValue(m, "a.b", "new")
-	a := m["a"].(map[string]interface{})
+	a := m["a"].(map[string]any)
 	if a["b"] != "new" {
 		t.Errorf("expected overwrite, got %v", a["b"])
 	}
 }
 
 func TestSetNestedValue_CreateIntermediateOverNonMap(t *testing.T) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"a": "not-a-map",
 	}
 	setNestedValue(m, "a.b", "value")
 	// "a" should now be a map (overwritten)
-	a, ok := m["a"].(map[string]interface{})
+	a, ok := m["a"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected a to become map, got %T", m["a"])
 	}
@@ -152,7 +152,7 @@ func TestMergedValues_JSONValues(t *testing.T) {
 	if got["replicaCount"] != float64(3) {
 		t.Errorf("replicaCount = %v", got["replicaCount"])
 	}
-	img, ok := got["image"].(map[string]interface{})
+	img, ok := got["image"].(map[string]any)
 	if !ok {
 		t.Fatalf("image not a map: %T", got["image"])
 	}

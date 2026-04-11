@@ -157,7 +157,7 @@ func (r *K8sTokenResource) Read(ctx context.Context, req resource.ReadRequest, r
 		token, endpoint, err := r.createToken(ctx, state)
 		if err != nil {
 			tflog.Warn(ctx, "Cluster unreachable, removing from state",
-				map[string]interface{}{"error": err.Error(), "id": state.ID.ValueString()})
+				map[string]any{"error": err.Error(), "id": state.ID.ValueString()})
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -166,7 +166,7 @@ func (r *K8sTokenResource) Read(ctx context.Context, req resource.ReadRequest, r
 		state.TokenExpiry = types.StringValue(
 			time.Now().Add(time.Duration(state.TokenDuration.ValueInt64()) * time.Second).Format(time.RFC3339))
 		tflog.Info(ctx, "Token refreshed (was expired or near expiry)",
-			map[string]interface{}{"id": state.ID.ValueString()})
+			map[string]any{"id": state.ID.ValueString()})
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -203,7 +203,7 @@ func (r *K8sTokenResource) Delete(ctx context.Context, req resource.DeleteReques
 	client, _, err := r.buildClient(state)
 	if err != nil {
 		tflog.Warn(ctx, "Cannot connect to cluster for cleanup, skipping",
-			map[string]interface{}{"error": err.Error()})
+			map[string]any{"error": err.Error()})
 		return
 	}
 

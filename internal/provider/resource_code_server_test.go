@@ -155,7 +155,7 @@ func TestResource_CodeServer_RetFullURL(t *testing.T) {
 	srv := httptest.NewUnstartedServer(mux)
 	idx := 0
 	mux.HandleFunc("POST /tests", func(w http.ResponseWriter, r *http.Request) {
-		resp := []byte(fmt.Sprintf(`{"self": "%s/tests/%d"}`, srv.URL, idx))
+		resp := fmt.Appendf(nil, `{"self": "%s/tests/%d"}`, srv.URL, idx)
 		objs[idx] = object{b: resp}
 		idx++
 		_, _ = w.Write(resp)
@@ -398,7 +398,7 @@ func TestResource_CodeServer_DeleteMethodBody(t *testing.T) {
 				if resp.StatusCode() != http.StatusOK {
 					return fmt.Errorf("%s: failed to read", addr)
 				}
-				var m map[string]interface{}
+				var m map[string]any
 				if err := json.Unmarshal(resp.Body(), &m); err != nil {
 					return err
 				}
@@ -406,7 +406,7 @@ func TestResource_CodeServer_DeleteMethodBody(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("expected `properties`, got nil")
 				}
-				if ll := len(l.([]interface{})); ll != 0 {
+				if ll := len(l.([]any)); ll != 0 {
 					return fmt.Errorf("expected zero length of `properties`, got %d", ll)
 				}
 				return nil
@@ -440,7 +440,7 @@ func TestResource_CodeServer_DeleteMethodBodyRaw(t *testing.T) {
 			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
-		var m map[string]interface{}
+		var m map[string]any
 		if err := json.Unmarshal(b, &m); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(err.Error()))
@@ -492,7 +492,7 @@ func TestResource_CodeServer_DeleteMethodBodyRaw(t *testing.T) {
 
 				dec := json.NewDecoder(bytes.NewBuffer(resp.Body()))
 				dec.UseNumber()
-				var m map[string]interface{}
+				var m map[string]any
 				if err := dec.Decode(&m); err != nil {
 					return err
 				}
@@ -500,7 +500,7 @@ func TestResource_CodeServer_DeleteMethodBodyRaw(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("expected `properties`, got nil")
 				}
-				if ll := len(l.([]interface{})); ll != 0 {
+				if ll := len(l.([]any)); ll != 0 {
 					return fmt.Errorf("expected zero length of `properties`, got %d", ll)
 				}
 				id, ok := m["id"]

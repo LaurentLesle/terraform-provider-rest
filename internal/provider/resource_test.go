@@ -22,7 +22,7 @@ func CheckJSONEqual(attr, expect string) resource.CheckResourceAttrWithFunc {
 }
 
 func JSONEqual(x, y string) (bool, error) {
-	var xm, ym map[string]interface{}
+	var xm, ym map[string]any
 	if err := json.Unmarshal([]byte(x), &xm); err != nil {
 		return false, err
 	}

@@ -49,7 +49,7 @@ func TestAddScalar(t *testing.T) {
 	addScalar(m, "bool_true", true)
 	addScalar(m, "bool_false", false)
 	addScalar(m, "null", nil)             // should be ignored
-	addScalar(m, "arr", []interface{}{1}) // should be ignored
+	addScalar(m, "arr", []any{1}) // should be ignored
 
 	expect := map[string]string{
 		"str":        "hello",
@@ -106,11 +106,11 @@ func TestParseEqFilter(t *testing.T) {
 // ── walkJSONPath ────────────────────────────────────────────────────────────
 
 func TestWalkJSONPath(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"name": "rg-test",
-		"properties": map[string]interface{}{
+		"properties": map[string]any{
 			"provisioningState": "Succeeded",
-			"nested": map[string]interface{}{
+			"nested": map[string]any{
 				"deep": "value",
 			},
 		},
@@ -118,7 +118,7 @@ func TestWalkJSONPath(t *testing.T) {
 
 	tests := []struct {
 		path string
-		want interface{}
+		want any
 	}{
 		{"name", "rg-test"},
 		{"properties.provisioningState", "Succeeded"},
@@ -140,7 +140,7 @@ func TestWalkJSONPath(t *testing.T) {
 // ── flattenJSONResponse ─────────────────────────────────────────────────────
 
 func TestFlattenJSONResponse_Simple(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"name":     "rg-test",
 		"location": "westeurope",
 		"type":     "Microsoft.Resources/resourceGroups",
@@ -155,10 +155,10 @@ func TestFlattenJSONResponse_Simple(t *testing.T) {
 }
 
 func TestFlattenJSONResponse_WithProperties(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"name": "rg-test",
 		"type": "Microsoft.Resources/resourceGroups",
-		"properties": map[string]interface{}{
+		"properties": map[string]any{
 			"provisioningState": "Succeeded",
 			"type":              "should-not-overwrite",
 		},
@@ -175,9 +175,9 @@ func TestFlattenJSONResponse_WithProperties(t *testing.T) {
 }
 
 func TestFlattenJSONResponse_IgnoresNestedObjects(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"name":    "test",
-		"tags":    map[string]interface{}{"env": "dev"}, // not a scalar
+		"tags":    map[string]any{"env": "dev"}, // not a scalar
 		"enabled": true,
 		"count":   float64(5),
 	}
@@ -199,7 +199,7 @@ func TestFlattenJSONResponse_IgnoresNestedObjects(t *testing.T) {
 // ── extractFirstResult ──────────────────────────────────────────────────────
 
 func TestExtractFirstResult_DirectObject(t *testing.T) {
-	obj := map[string]interface{}{"name": "rg-test"}
+	obj := map[string]any{"name": "rg-test"}
 	got := extractFirstResult(obj, "")
 	if got["name"] != "rg-test" {
 		t.Errorf("expected direct object passthrough")
@@ -207,10 +207,10 @@ func TestExtractFirstResult_DirectObject(t *testing.T) {
 }
 
 func TestExtractFirstResult_ListNoFilter(t *testing.T) {
-	obj := map[string]interface{}{
-		"value": []interface{}{
-			map[string]interface{}{"name": "first"},
-			map[string]interface{}{"name": "second"},
+	obj := map[string]any{
+		"value": []any{
+			map[string]any{"name": "first"},
+			map[string]any{"name": "second"},
 		},
 	}
 	got := extractFirstResult(obj, "")
@@ -220,10 +220,10 @@ func TestExtractFirstResult_ListNoFilter(t *testing.T) {
 }
 
 func TestExtractFirstResult_ListWithFilter(t *testing.T) {
-	obj := map[string]interface{}{
-		"value": []interface{}{
-			map[string]interface{}{"tenantId": "aaa", "name": "first"},
-			map[string]interface{}{"tenantId": "bbb", "name": "second"},
+	obj := map[string]any{
+		"value": []any{
+			map[string]any{"tenantId": "aaa", "name": "first"},
+			map[string]any{"tenantId": "bbb", "name": "second"},
 		},
 	}
 	got := extractFirstResult(obj, "tenantId eq 'bbb'")
@@ -236,9 +236,9 @@ func TestExtractFirstResult_ListWithFilter(t *testing.T) {
 }
 
 func TestExtractFirstResult_ListWithFilterNoMatch(t *testing.T) {
-	obj := map[string]interface{}{
-		"value": []interface{}{
-			map[string]interface{}{"tenantId": "aaa"},
+	obj := map[string]any{
+		"value": []any{
+			map[string]any{"tenantId": "aaa"},
 		},
 	}
 	got := extractFirstResult(obj, "tenantId eq 'zzz'")
@@ -248,8 +248,8 @@ func TestExtractFirstResult_ListWithFilterNoMatch(t *testing.T) {
 }
 
 func TestExtractFirstResult_EmptyList(t *testing.T) {
-	obj := map[string]interface{}{
-		"value": []interface{}{},
+	obj := map[string]any{
+		"value": []any{},
 	}
 	got := extractFirstResult(obj, "")
 	if got != nil {
@@ -859,7 +859,7 @@ func TestResolveExistingRefsInAttrs_Unresolvable(t *testing.T) {
 
 // ── decodeJWTClaims ─────────────────────────────────────────────────────────
 
-func makeTestJWT(claims map[string]interface{}) string {
+func makeTestJWT(claims map[string]any) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
 	payload, _ := json.Marshal(claims)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payload)
@@ -867,7 +867,7 @@ func makeTestJWT(claims map[string]interface{}) string {
 }
 
 func TestDecodeJWTClaims_Basic(t *testing.T) {
-	token := makeTestJWT(map[string]interface{}{
+	token := makeTestJWT(map[string]any{
 		"oid":   "obj-123",
 		"tid":   "tenant-456",
 		"upn":   "user@example.com",
@@ -894,7 +894,7 @@ func TestDecodeJWTClaims_Basic(t *testing.T) {
 }
 
 func TestDecodeJWTClaims_ServicePrincipal(t *testing.T) {
-	token := makeTestJWT(map[string]interface{}{
+	token := makeTestJWT(map[string]any{
 		"oid":   "sp-obj",
 		"appid": "app-123",
 		"idtyp": "app",
@@ -920,7 +920,7 @@ func TestDecodeJWTClaims_InvalidJWT(t *testing.T) {
 }
 
 func TestDecodeJWTClaims_NumericClaim(t *testing.T) {
-	token := makeTestJWT(map[string]interface{}{
+	token := makeTestJWT(map[string]any{
 		"oid": "obj-1",
 		"iat": float64(1700000000),
 	})

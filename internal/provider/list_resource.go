@@ -279,7 +279,8 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 					push(result)
 					return
 				}
-				impspec.Body = ToPtr(json.RawMessage(body))
+				impspec.Body = new(json.RawMessage)
+				*impspec.Body = json.RawMessage(body)
 			}
 			if !config.ResourceReadSelector.IsNull() {
 				impspec.ReadSelector = config.ResourceReadSelector.ValueStringPointer()

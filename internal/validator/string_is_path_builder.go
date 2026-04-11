@@ -31,7 +31,7 @@ func (stringsIsPathBuilder) ValidateString(ctx context.Context, req validator.St
 	check := func(matches [][]string) diag.Diagnostic {
 		for _, match := range matches {
 			fnames, value := match[1], match[2]
-			for _, fname := range strings.Split(fnames, ".") {
+			for fname := range strings.SplitSeq(fnames, ".") {
 				if fname != "" {
 					if _, ok := pathFuncs[exparam.FuncName(fname)]; !ok {
 						return diag.NewAttributeErrorDiagnostic(

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -173,7 +173,7 @@ func (f *ValidateExternalsFunction) Run(ctx context.Context, req function.RunReq
 			}
 		}
 		if len(warnErrors) > 0 {
-			sort.Strings(warnErrors)
+			slices.Sort(warnErrors)
 			resp.Error = function.NewFuncError(
 				"External resource validation failed (fail_on_warning=true):\n  " + strings.Join(warnErrors, "\n  "),
 			)
@@ -456,7 +456,7 @@ func CollectWarnings(enrichedData map[string]map[string]map[string]string) []str
 			}
 		}
 	}
-	sort.Strings(warnings)
+	slices.Sort(warnings)
 	return warnings
 }
 
@@ -740,7 +740,7 @@ func doGET(client *http.Client, url, scheme, token string) error {
 
 // fetchJSON does a GET and returns the parsed JSON response body.
 // Returns (nil, nil) on auth failure (401/403) — caller should skip silently.
-func fetchJSON(client *http.Client, url, scheme, token string) (map[string]interface{}, error) {
+func fetchJSON(client *http.Client, url, scheme, token string) (map[string]any, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("building request: %w", err)
@@ -770,7 +770,7 @@ func fetchJSON(client *http.Client, url, scheme, token string) (map[string]inter
 		return nil, fmt.Errorf("unexpected HTTP %d", httpResp.StatusCode)
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("parsing JSON response: %w", err)
 	}
@@ -817,7 +817,7 @@ func decodeJWTClaims(token string) (map[string]string, error) {
 		return nil, fmt.Errorf("decoding JWT payload: %w", err)
 	}
 
-	var claims map[string]interface{}
+	var claims map[string]any
 	if err := json.Unmarshal(decoded, &claims); err != nil {
 		return nil, fmt.Errorf("parsing JWT claims: %w", err)
 	}
@@ -892,9 +892,9 @@ func decodeJWTClaims(token string) (map[string]string, error) {
 // When searchFilter is non-empty (e.g. "tenantId eq '...'"), it filters the array client-side
 // rather than relying on the API's $filter support.  For direct GET responses, returns the object as-is.
 // Returns nil if no matching result is found.
-func extractFirstResult(jsonBody map[string]interface{}, searchFilter string) map[string]interface{} {
+func extractFirstResult(jsonBody map[string]any, searchFilter string) map[string]any {
 	if value, ok := jsonBody["value"]; ok {
-		if arr, ok := value.([]interface{}); ok {
+		if arr, ok := value.([]any); ok {
 			if len(arr) == 0 {
 				return nil
 			}
@@ -903,7 +903,7 @@ func extractFirstResult(jsonBody map[string]interface{}, searchFilter string) ma
 				field, val, ok := parseEqFilter(searchFilter)
 				if ok {
 					for _, item := range arr {
-						if obj, ok := item.(map[string]interface{}); ok {
+						if obj, ok := item.(map[string]any); ok {
 							if fmt.Sprintf("%v", walkJSONPath(obj, field)) == val {
 								return obj
 							}
@@ -913,7 +913,7 @@ func extractFirstResult(jsonBody map[string]interface{}, searchFilter string) ma
 				}
 			}
 			// No filter or unparseable — return first item
-			if first, ok := arr[0].(map[string]interface{}); ok {
+			if first, ok := arr[0].(map[string]any); ok {
 				return first
 			}
 			return nil
@@ -937,11 +937,11 @@ func parseEqFilter(filter string) (string, string, bool) {
 
 // walkJSONPath walks a dotted path (e.g. "properties.roleName") into a nested
 // JSON object. Returns nil if any segment is missing.
-func walkJSONPath(obj map[string]interface{}, path string) interface{} {
+func walkJSONPath(obj map[string]any, path string) any {
 	segments := strings.Split(path, ".")
-	var current interface{} = obj
+	var current any = obj
 	for _, seg := range segments {
-		m, ok := current.(map[string]interface{})
+		m, ok := current.(map[string]any)
 		if !ok {
 			return nil
 		}
@@ -956,7 +956,7 @@ func walkJSONPath(obj map[string]interface{}, path string) interface{} {
 // flattenJSONResponse converts a JSON object to a flat map[string]string with snake_case keys.
 // Handles top-level scalars and flattens the ARM "properties" sub-object.
 // Two-pass: top-level scalars first, then properties promotion (never overwrites).
-func flattenJSONResponse(obj map[string]interface{}) map[string]string {
+func flattenJSONResponse(obj map[string]any) map[string]string {
 	result := make(map[string]string)
 
 	// Pass 1: collect all top-level scalar fields.
@@ -966,7 +966,7 @@ func flattenJSONResponse(obj map[string]interface{}) map[string]string {
 
 	// Pass 2: promote properties sub-keys, skipping any that collide
 	// with an existing top-level key (e.g. "type").
-	if props, ok := obj["properties"].(map[string]interface{}); ok {
+	if props, ok := obj["properties"].(map[string]any); ok {
 		for pk, pv := range props {
 			propKey := camelToSnake(pk)
 			if _, exists := result[propKey]; !exists {
@@ -978,7 +978,7 @@ func flattenJSONResponse(obj map[string]interface{}) map[string]string {
 	return result
 }
 
-func addScalar(m map[string]string, key string, v interface{}) {
+func addScalar(m map[string]string, key string, v any) {
 	switch val := v.(type) {
 	case string:
 		m[key] = val
@@ -1070,7 +1070,7 @@ func sortedKeys[V any](m map[string]V) []string {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 
