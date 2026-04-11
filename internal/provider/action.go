@@ -348,7 +348,7 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 		body, err = dynamic.ToJSON(config.Body)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				`Error to marshal "body"`,
+				`marshaling "body"`,
 				err.Error(),
 			)
 			return
@@ -379,7 +379,7 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 	response, err := c.Operation(ctx, config.Path.ValueString(), body, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to invoke action",
+			"invoking action",
 			err.Error(),
 		)
 		return

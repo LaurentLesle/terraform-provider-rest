@@ -400,7 +400,7 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 		body, err = dynamic.ToJSON(plan.Body)
 		if err != nil {
 			respDiags.AddError(
-				`Error to marshal "body"`,
+				`marshaling "body"`,
 				err.Error(),
 			)
 			return
@@ -428,7 +428,7 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 	response, err := c.Operation(ctx, plan.Path.ValueString(), body, *opt)
 	if err != nil {
 		respDiags.AddError(
-			"Error to call operation",
+			"calling operation API",
 			err.Error(),
 		)
 		return
@@ -664,7 +664,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 	b, err := dynamic.ToJSON(state.DeleteBody)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			`Error to marshal "delete_body"`,
+			`marshaling "delete_body"`,
 			err.Error(),
 		)
 		return
@@ -673,7 +673,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 	response, err := c.Operation(ctx, path, b, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Delete: Error to call operation",
+			"calling delete operation API",
 			err.Error(),
 		)
 		return

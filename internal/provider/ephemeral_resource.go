@@ -404,7 +404,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 	response, err := c.Operation(ctx, config.Path.ValueString(), body, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call open operation",
+			"calling open operation API",
 			err.Error(),
 		)
 		return
@@ -640,7 +640,7 @@ func (e *EphemeralResource) Renew(ctx context.Context, req ephemeral.RenewReques
 	response, err := c.Operation(ctx, pd.Path.ValueString(), output, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call renew operation",
+			"calling renew operation API",
 			err.Error(),
 		)
 		return
@@ -710,7 +710,7 @@ func (e *EphemeralResource) Close(ctx context.Context, req ephemeral.CloseReques
 	response, err := c.Operation(ctx, pd.Path.ValueString(), output, *opt)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error to call close operation",
+			"calling close operation API",
 			err.Error(),
 		)
 		return

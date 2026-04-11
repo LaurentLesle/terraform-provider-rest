@@ -379,7 +379,7 @@ func (c *Client) Operation(ctx context.Context, path string, body []byte, opt Op
 	case "DELETE":
 		return req.Delete(path)
 	default:
-		return nil, fmt.Errorf("unknown create method: %s", opt.Method)
+		return nil, fmt.Errorf("unknown operation method: %s", opt.Method)
 	}
 }
 
