@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
@@ -27,32 +28,38 @@ func (q Query) Clone() Query {
 	return Query(m)
 }
 
-func (q Query) TakeOrSelf(ctx context.Context, v types.Map) Query {
+func (q Query) TakeOrSelf(ctx context.Context, v types.Map) (Query, diag.Diagnostics) {
 	if len(v.Elements()) == 0 {
-		return q
+		return q, nil
 	}
 	nq := Query{}
 	for k, v := range v.Elements() {
+		list, ok := v.(types.List)
+		if !ok {
+			return q, diag.Diagnostics{diag.NewErrorDiagnostic("invalid query parameter type", fmt.Sprintf("expected list for query key %q, got %T", k, v))}
+		}
 		vs := []string{}
-		diags := v.(types.List).ElementsAs(ctx, &vs, false)
-		if diags.HasError() {
-			panic(diags)
+		if dd := list.ElementsAs(ctx, &vs, false); dd.HasError() {
+			return q, dd
 		}
 		nq[k] = vs
 	}
-	return nq
+	return nq, nil
 }
 
-func (q Query) TakeWithExparamOrSelf(ctx context.Context, v types.Map, body []byte) Query {
+func (q Query) TakeWithExparamOrSelf(ctx context.Context, v types.Map, body []byte) (Query, diag.Diagnostics) {
 	if len(v.Elements()) == 0 {
-		return q
+		return q, nil
 	}
 	nq := Query{}
 	for k, v := range v.Elements() {
+		list, ok := v.(types.List)
+		if !ok {
+			return q, diag.Diagnostics{diag.NewErrorDiagnostic("invalid query parameter type", fmt.Sprintf("expected list for query key %q, got %T", k, v))}
+		}
 		vs := []string{}
-		diags := v.(types.List).ElementsAs(ctx, &vs, false)
-		if diags.HasError() {
-			panic(diags)
+		if dd := list.ElementsAs(ctx, &vs, false); dd.HasError() {
+			return q, dd
 		}
 		vvs := []string{}
 		for _, v := range vs {
@@ -64,7 +71,7 @@ func (q Query) TakeWithExparamOrSelf(ctx context.Context, v types.Map, body []by
 		}
 		nq[k] = vvs
 	}
-	return nq
+	return nq, nil
 }
 
 func (q Query) ToTFValue() types.Map {
@@ -81,44 +88,56 @@ func (h Header) Clone() Header {
 	return nh
 }
 
-func (h Header) TakeOrSelf(ctx context.Context, v types.Map) Header {
+func (h Header) TakeOrSelf(ctx context.Context, v types.Map) (Header, diag.Diagnostics) {
 	if len(v.Elements()) == 0 {
-		return h
+		return h, nil
 	}
 	nh := Header{}
 	for k, v := range v.Elements() {
-		nh[k] = v.(types.String).ValueString()
+		s, ok := v.(types.String)
+		if !ok {
+			return h, diag.Diagnostics{diag.NewErrorDiagnostic("invalid header type", fmt.Sprintf("expected string for header key %q, got %T", k, v))}
+		}
+		nh[k] = s.ValueString()
 	}
-	return nh
+	return nh, nil
 }
 
 // MergeOrSelf merges the entries from v into h without dropping existing keys.
 // Keys in v override keys in h. If v is empty/null, h is returned unchanged.
-func (h Header) MergeOrSelf(ctx context.Context, v types.Map) Header {
+func (h Header) MergeOrSelf(ctx context.Context, v types.Map) (Header, diag.Diagnostics) {
 	if len(v.Elements()) == 0 {
-		return h
+		return h, nil
 	}
 	nh := h.Clone()
 	for k, v := range v.Elements() {
-		nh[k] = v.(types.String).ValueString()
+		s, ok := v.(types.String)
+		if !ok {
+			return h, diag.Diagnostics{diag.NewErrorDiagnostic("invalid header type", fmt.Sprintf("expected string for header key %q, got %T", k, v))}
+		}
+		nh[k] = s.ValueString()
 	}
-	return nh
+	return nh, nil
 }
 
-func (h Header) TakeWithExparamOrSelf(ctx context.Context, v types.Map, body []byte) Header {
+func (h Header) TakeWithExparamOrSelf(ctx context.Context, v types.Map, body []byte) (Header, diag.Diagnostics) {
 	if len(v.Elements()) == 0 {
-		return h
+		return h, nil
 	}
 	nh := Header{}
 	for k, v := range v.Elements() {
-		v := v.(types.String).ValueString()
-		vv, err := exparam.ExpandBody(v, body)
+		s, ok := v.(types.String)
+		if !ok {
+			return h, diag.Diagnostics{diag.NewErrorDiagnostic("invalid header type", fmt.Sprintf("expected string for header key %q, got %T", k, v))}
+		}
+		sv := s.ValueString()
+		vv, err := exparam.ExpandBody(sv, body)
 		if err != nil {
-			vv = v
+			vv = sv
 		}
 		nh[k] = vv
 	}
-	return nh
+	return nh, nil
 }
 
 func (h Header) ToTFValue() types.Map {

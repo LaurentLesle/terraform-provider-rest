@@ -264,10 +264,22 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 			impspec.Id = id
 
 			if !config.ResourceQuery.IsNull() {
-				impspec.Query = url.Values(client.Query{}.TakeOrSelf(ctx, config.ResourceQuery))
+				q, dd := client.Query{}.TakeOrSelf(ctx, config.ResourceQuery)
+				if len(dd) > 0 {
+					result.Diagnostics = append(result.Diagnostics, dd...)
+					push(result)
+					return
+				}
+				impspec.Query = url.Values(q)
 			}
 			if !config.ResourceHeader.IsNull() {
-				impspec.Header = client.Header{}.TakeOrSelf(ctx, config.ResourceHeader)
+				h, dd := client.Header{}.TakeOrSelf(ctx, config.ResourceHeader)
+				if len(dd) > 0 {
+					result.Diagnostics = append(result.Diagnostics, dd...)
+					push(result)
+					return
+				}
+				impspec.Header = h
 			}
 			if !config.ResourceBody.IsNull() {
 				body, err := dynamic.ToJSON(config.ResourceBody)

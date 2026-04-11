@@ -1376,10 +1376,18 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 		Path: state.Path.ValueString(),
 	}
 	if !state.Query.IsNull() {
-		impspec.Query = url.Values(client.Query{}.TakeOrSelf(ctx, state.Query))
+		q, dd := client.Query{}.TakeOrSelf(ctx, state.Query)
+		if resp.Diagnostics.Append(dd...); resp.Diagnostics.HasError() {
+			return
+		}
+		impspec.Query = url.Values(q)
 	}
 	if !state.Header.IsNull() {
-		impspec.Header = client.Header{}.TakeOrSelf(ctx, state.Header)
+		h, dd := client.Header{}.TakeOrSelf(ctx, state.Header)
+		if resp.Diagnostics.Append(dd...); resp.Diagnostics.HasError() {
+			return
+		}
+		impspec.Header = h
 	}
 	if !state.Body.IsNull() {
 		body, err := dynamic.ToJSON(state.Body)
