@@ -61,7 +61,7 @@ func precheck(ctx context.Context, c *client.Client, apiOpt apiOption, defaultPa
 
 	return func() {
 		for i := len(lockedNames) - 1; i >= 0; i-- {
-			locks.Unlock(lockedNames[i])
+			locks.Unlock(ctx, lockedNames[i])
 		}
 	}, nil
 }
