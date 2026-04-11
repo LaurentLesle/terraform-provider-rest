@@ -130,7 +130,7 @@ func (opt apiOption) ForPoll(ctx context.Context, defaultHeader client.Header, d
 		return nil, diags
 	}
 
-	statusLocator, err := expandValueLocatorWithParam(d.StatusLocator.ValueString(), bodyJSON)
+	statusLocator, err := expandValueLocator(d.StatusLocator.ValueString(), bodyJSON)
 	if err != nil {
 		diags.AddError("Failed to parse status locator", err.Error())
 		return nil, diags
@@ -138,7 +138,7 @@ func (opt apiOption) ForPoll(ctx context.Context, defaultHeader client.Header, d
 
 	var urlLocator client.ValueLocator
 	if !d.UrlLocator.IsNull() {
-		loc, err := expandValueLocatorWithParam(d.UrlLocator.ValueString(), bodyJSON)
+		loc, err := expandValueLocator(d.UrlLocator.ValueString(), bodyJSON)
 		if err != nil {
 			diags.AddError("Failed to parse url locator", err.Error())
 			return nil, diags
@@ -187,7 +187,7 @@ func (opt apiOption) ForPrecheck(ctx context.Context, defaultPath string, defaul
 		return nil, diags
 	}
 
-	statusLocator, err := expandValueLocatorWithParam(d.StatusLocator.ValueString(), bodyJSON)
+	statusLocator, err := expandValueLocator(d.StatusLocator.ValueString(), bodyJSON)
 	if err != nil {
 		diags.AddError("Failed to parse status locator", err.Error())
 		return nil, diags
