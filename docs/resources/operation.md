@@ -45,6 +45,7 @@ resource "rest_operation" "register_rp" {
 
 ### Optional
 
+- `auth_ref` (String) Reference to a `named_auth` entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.
 - `body` (Dynamic) The payload for the `Create`/`Update` call.
 - `delete_body` (Dynamic) The payload for the `Delete` call.
 - `delete_header` (Map of Strings) The header parameters that are applied to each delete request. This overrides the `header` set in the resource block.

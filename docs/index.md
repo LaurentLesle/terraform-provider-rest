@@ -140,6 +140,7 @@ provider "rest" {
 - `graph_token` (String, Sensitive) Bearer token for Microsoft Graph. Used by validate_externals to verify entraid_* external references.
 - `header` (Map of Strings) The header parameters that are applied to each request.
 - `merge_patch_disabled` (Boolean) Whether to use a JSON Merge Patch as the request body in the PATCH update? Defaults to `false`. This is only effective when `update_method` is set to `PATCH`.
+- `named_auth` (Map of Objects, Sensitive) Named authentication configurations. Each entry creates an independent HTTP client with its own auth transport. Resources select an entry via `auth_ref`. See [below for nested schema](#nested--named_auth).
 - `query` (Map of Lists of Strings) The query parameters that are applied to each request.
 - `security` (Object) The OpenAPI security scheme that is be used for auth. See [below for nested schema](#nested--security).
 - `update_method` (String) The method used to update the resource. Defaults to `PUT`.
@@ -202,6 +203,106 @@ Optional:
 - `count` (Int64) The maximum allowed retries. Defaults to `3`.
 - `max_wait_in_sec` (Int64) The maximum allowed retry wait time. Defaults to `3600`.
 - `wait_in_sec` (Int64) The initial retry wait time between two retries in second, if there is no `Retry-After` in the response header, or the `Retry-After` is less than this. The wait time will be increased in capped exponential backoff with jitter, at most up to `max_wait_in_sec` (if not null). Defaults to `1`.
+<a id="nested--named_auth"></a>
+### Nested Schema for `named_auth`
+
+Optional:
+
+- `apikey` (Set of Objects) Configuration for the API Key authentication scheme. See [below for nested schema](#nested--named_auth.apikey).
+- `http` (Object) Configuration for the HTTP authentication scheme. See [below for nested schema](#nested--named_auth.http).
+- `oauth2` (Object) Configuration for the OAuth2 authentication scheme. See [below for nested schema](#nested--named_auth.oauth2).
+<a id="nested--named_auth.apikey"></a>
+### Nested Schema for `named_auth.apikey`
+
+Required:
+
+- `in` (String) Specifies how is the API Key is sent.
+
+	-> Value must be one of: ["header" "query" "cookie"].
+- `name` (String) The API Key name
+- `value` (String) The API Key value
+<a id="nested--named_auth.http"></a>
+### Nested Schema for `named_auth.http`
+
+Optional:
+
+- `basic` (Object) Basic authentication See [below for nested schema](#nested--named_auth.http.basic).
+- `token` (Object) Auth token (e.g. Bearer). See [below for nested schema](#nested--named_auth.http.token).
+<a id="nested--named_auth.http.basic"></a>
+### Nested Schema for `named_auth.http.basic`
+
+Required:
+
+- `password` (String, Sensitive) The password.
+- `username` (String) The username.
+<a id="nested--named_auth.http.token"></a>
+### Nested Schema for `named_auth.http.token`
+
+Required:
+
+- `token` (String, Sensitive) The value of the token.
+
+Optional:
+
+- `scheme` (String) The auth scheme. Defaults to `Bearer`.
+<a id="nested--named_auth.oauth2"></a>
+### Nested Schema for `named_auth.oauth2`
+
+Optional:
+
+- `client_credentials` (Object) Client credentials. See [below for nested schema](#nested--named_auth.oauth2.client_credentials).
+- `password` (Object) Resource owner password credential. See [below for nested schema](#nested--named_auth.oauth2.password).
+- `refresh_token` (Object) Refresh token. See [below for nested schema](#nested--named_auth.oauth2.refresh_token).
+<a id="nested--named_auth.oauth2.client_credentials"></a>
+### Nested Schema for `named_auth.oauth2.client_credentials`
+
+Required:
+
+- `client_id` (String) The application's ID.
+- `client_secret` (String, Sensitive) The application's secret.
+- `token_url` (String) The token URL to be used for this flow.
+
+Optional:
+
+- `endpoint_params` (Map of Lists of Strings) The additional parameters for requests to the token endpoint.
+- `in` (String) Specifies how is the client ID & secret sent.
+
+	-> Value must be one of: ["params" "header"].
+- `scopes` (List of Strings) The optional requested permissions.
+<a id="nested--named_auth.oauth2.password"></a>
+### Nested Schema for `named_auth.oauth2.password`
+
+Required:
+
+- `password` (String, Sensitive) The password.
+- `token_url` (String) The token URL to be used for this flow.
+- `username` (String) The username.
+
+Optional:
+
+- `client_id` (String) The application's ID.
+- `client_secret` (String, Sensitive) The application's secret.
+- `in` (String) Specifies how is the client ID & secret sent.
+
+	-> Value must be one of: ["params" "header"].
+- `scopes` (List of Strings) The optional requested permissions.
+<a id="nested--named_auth.oauth2.refresh_token"></a>
+### Nested Schema for `named_auth.oauth2.refresh_token`
+
+Required:
+
+- `refresh_token` (String, Sensitive) The refresh token.
+- `token_url` (String) The token URL to be used for this flow.
+
+Optional:
+
+- `client_id` (String) The application's ID.
+- `client_secret` (String, Sensitive) The application's secret.
+- `in` (String) Specifies how is the client ID & secret sent.
+
+	-> Value must be one of: ["params" "header"].
+- `scopes` (List of Strings) The optional requested permissions.
+- `token_type` (String) The type of the access token. Defaults to "Bearer".
 <a id="nested--security"></a>
 ### Nested Schema for `security`
 

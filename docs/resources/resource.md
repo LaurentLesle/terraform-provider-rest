@@ -48,6 +48,7 @@ resource "rest_resource" "rg" {
 
 ### Optional
 
+- `auth_ref` (String) Reference to a `named_auth` entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.
 - `check_existance` (Boolean) Whether to check resource already existed? Defaults to `false`.
 - `create_header` (Map of Strings) The header parameters that are applied to each create request. This overrides the `header` set in the resource block.
 - `create_method` (String) The method used to create the resource. This overrides the `create_method` set in the provider block (defaults to POST).

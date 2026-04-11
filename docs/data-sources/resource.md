@@ -27,6 +27,7 @@ data "rest_resource" "test" {
 ### Optional
 
 - `allow_not_exist` (Boolean) Whether to throw error if the data source being queried doesn't exist (i.e. status code is 404). Defaults to `false`.
+- `auth_ref` (String) Reference to a `named_auth` entry in the provider configuration. When set, this data source uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.
 - `body` (Dynamic) The request body that is sent when using `POST` method.
 - `header` (Map of Strings) The header parameters that are applied to each request. This overrides the `header` set in the provider block.
 - `method` (String) The HTTP Method for the request. `POST` support is only intended for read-only URLs, such as submitting a search. Defaults to `GET`.

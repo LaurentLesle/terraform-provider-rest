@@ -54,6 +54,31 @@ This fork adds the primitives needed to support these workflows while preserving
 |---|---|
 | `rest_validate_externals` | Data source wrapper around `validate_externals` for use in contexts where provider functions are not available. Emits native Terraform warnings for API issues. |
 
+### Cross-tenant authentication (`named_auth` / `auth_ref`)
+
+The provider supports multiple independent HTTP clients within a single provider block via `named_auth`. Each entry has its own auth transport and can be referenced from any resource or data source using `auth_ref`.
+
+```hcl
+provider "rest" {
+  base_url = "https://management.azure.com"
+  security = { oauth2 = { client_credentials = { ... } } }  # default tenant
+
+  named_auth = {
+    tenant_b = {
+      oauth2 = { client_credentials = { client_id = "...", client_secret = "...", token_url = "..." } }
+    }
+  }
+}
+
+resource "rest_resource" "cross_tenant" {
+  auth_ref = "tenant_b"
+  path     = "/subscriptions/.../resourceGroups/my-rg"
+  # ...
+}
+```
+
+`auth_ref` is supported on `rest_resource`, `rest_operation`, and `rest_resource` data source.
+
 ### Provider-level configuration additions
 
 The provider block accepts additional optional attributes to supply tokens for external validation:
