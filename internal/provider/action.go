@@ -387,7 +387,7 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Invoke API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}

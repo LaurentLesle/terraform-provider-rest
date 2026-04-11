@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch"
@@ -55,6 +56,8 @@ type operationResourceData struct {
 	EphemeralHeader types.Map `tfsdk:"ephemeral_header"`
 	OperationHeader types.Map `tfsdk:"operation_header"`
 	DeleteHeader    types.Map `tfsdk:"delete_header"`
+
+	AuthRef types.String `tfsdk:"auth_ref"`
 
 	Precheck       types.List    `tfsdk:"precheck"`
 	Poll           types.Object  `tfsdk:"poll"`
@@ -173,6 +176,11 @@ func (r *OperationResource) Schema(ctx context.Context, req resource.SchemaReque
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
+			"auth_ref": schema.StringAttribute{
+				Description:         "Reference to a named_auth entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				MarkdownDescription: "Reference to a `named_auth` entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				Optional:            true,
+			},
 
 			"precheck": resourcePrecheckAttribute("`Create`/`Update`", true, "", false),
 			"poll":     resourcePollAttribute("`Create`/`Update`"),
@@ -262,7 +270,20 @@ func (r *OperationResource) ValidateConfig(ctx context.Context, req resource.Val
 
 func (r *OperationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
-		// If the entire plan is null, the resource is planned for destruction.
+		// Resource is planned for destruction.
+		// Persist auth_ref from config to private state so Delete can use it
+		// even if auth_ref is not in the resource state (pre-existing resources).
+		if !req.Config.Raw.IsNull() {
+			var config operationResourceData
+			if diags := req.Config.Get(ctx, &config); diags.HasError() {
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+			if !config.AuthRef.IsNull() {
+				authRefJSON, _ := json.Marshal(config.AuthRef.ValueString())
+				resp.Diagnostics.Append(resp.Private.SetKey(ctx, "auth_ref", authRefJSON)...)
+			}
+		}
 		return
 	}
 	if req.State.Raw.IsNull() {
@@ -326,15 +347,19 @@ func (r *OperationResource) Configure(ctx context.Context, req resource.Configur
 }
 
 func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.Config, reqPlan tfsdk.Plan, reqState tfsdk.State, respPrivate ephemeral.PrivateData, respState *tfsdk.State, respDiags *diag.Diagnostics, forCreate bool) {
-	c := r.p.client
-	c.SetLoggerContext(ctx)
-
 	var plan operationResourceData
 	diags := reqPlan.Get(ctx, &plan)
 	respDiags.Append(diags...)
 	if respDiags.HasError() {
 		return
 	}
+
+	c, err := r.p.ClientForAuthRef(plan.AuthRef.ValueString())
+	if err != nil {
+		respDiags.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	var config operationResourceData
 	diags = reqConfig.Get(ctx, &config)
@@ -411,7 +436,7 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 	if !response.IsSuccess() {
 		respDiags.AddError(
 			fmt.Sprintf("Operation API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}
@@ -546,6 +571,12 @@ func (r *OperationResource) createOrUpdate(ctx context.Context, reqConfig tfsdk.
 		return
 	}
 
+	// Persist auth_ref to private state for future destroy operations.
+	if !plan.AuthRef.IsNull() {
+		authRefJSON, _ := json.Marshal(plan.AuthRef.ValueString())
+		respDiags.Append(respPrivate.SetKey(ctx, "auth_ref", authRefJSON)...)
+	}
+
 	diags = ephemeral.Set(ctx, respPrivate, eb)
 	respDiags.Append(diags...)
 	if respDiags.HasError() {
@@ -565,15 +596,27 @@ func (r *OperationResource) Read(ctx context.Context, req resource.ReadRequest, 
 }
 
 func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	c := r.p.client
-	c.SetLoggerContext(ctx)
-
 	var state operationResourceData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
 	}
+
+	authRef := state.AuthRef.ValueString()
+	if authRef == "" {
+		// Fallback: check private state for auth_ref persisted by ModifyPlan.
+		// Handles pre-existing resources whose state was written before auth_ref existed.
+		if raw, diags := req.Private.GetKey(ctx, "auth_ref"); !diags.HasError() && len(raw) > 0 {
+			json.Unmarshal(raw, &authRef)
+		}
+	}
+	c, err := r.p.ClientForAuthRef(authRef)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	output, err := dynamic.ToJSON(r.getOutput(state))
 	if err != nil {
@@ -638,7 +681,7 @@ func (r *OperationResource) Delete(ctx context.Context, req resource.DeleteReque
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Delete: Operation API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}

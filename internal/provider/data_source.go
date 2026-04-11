@@ -32,6 +32,7 @@ type dataSourceData struct {
 	Method             types.String  `tfsdk:"method"`
 	Query              types.Map     `tfsdk:"query"`
 	Header             types.Map     `tfsdk:"header"`
+	AuthRef            types.String  `tfsdk:"auth_ref"`
 	Body               types.Dynamic `tfsdk:"body"`
 	Selector           types.String  `tfsdk:"selector"`
 	OutputAttrs        types.Set     `tfsdk:"output_attrs"`
@@ -172,6 +173,11 @@ func (d *DataSource) Schema(ctx context.Context, req datasource.SchemaRequest, r
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
+			"auth_ref": schema.StringAttribute{
+				Description:         "Reference to a named_auth entry in the provider configuration. When set, this data source uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				MarkdownDescription: "Reference to a `named_auth` entry in the provider configuration. When set, this data source uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				Optional:            true,
+			},
 			"body": schema.DynamicAttribute{
 				Description:         "The request body that is sent when using `POST` method.",
 				MarkdownDescription: "The request body that is sent when using `POST` method.",
@@ -253,15 +259,19 @@ func (d *DataSource) Configure(ctx context.Context, req datasource.ConfigureRequ
 }
 
 func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	c := d.p.client
-	c.SetLoggerContext(ctx)
-
 	var config dataSourceData
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
 	}
+
+	c, err := d.p.ClientForAuthRef(config.AuthRef.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	opt, diags := d.p.apiOpt.ForDataSourceRead(ctx, config)
 	resp.Diagnostics.Append(diags...)
@@ -321,7 +331,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		}
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Read API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}

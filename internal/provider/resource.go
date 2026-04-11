@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/dynamicvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfpath "github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -101,6 +100,8 @@ type resourceData struct {
 	UpdateHeader    types.Map `tfsdk:"update_header"`
 	DeleteHeader    types.Map `tfsdk:"delete_header"`
 
+	AuthRef types.String `tfsdk:"auth_ref"`
+
 	CheckExistance types.Bool `tfsdk:"check_existance"`
 	ForceNewAttrs  types.Set  `tfsdk:"force_new_attrs"`
 	OutputAttrs    types.Set  `tfsdk:"output_attrs"`
@@ -108,20 +109,6 @@ type resourceData struct {
 	UseSensitiveOutput types.Bool    `tfsdk:"use_sensitive_output"`
 	Output             types.Dynamic `tfsdk:"output"`
 	SensitiveOutput    types.Dynamic `tfsdk:"sensitive_output"`
-}
-
-const pkEphemeralHeader = "ephemeral_header"
-
-// setEphemeralHeaderFlag marks in private state that this resource uses ephemeral_header.
-// This flag survives across plan/apply cycles (private state is opaque to Terraform).
-func setEphemeralHeaderFlag(ctx context.Context, d ephemeral.PrivateData) diag.Diagnostics {
-	return d.SetKey(ctx, pkEphemeralHeader, []byte("1"))
-}
-
-// hasEphemeralHeaderFlag checks whether this resource uses ephemeral_header.
-func hasEphemeralHeaderFlag(ctx context.Context, d ephemeral.PrivateData) (bool, diag.Diagnostics) {
-	b, diags := d.GetKey(ctx, pkEphemeralHeader)
-	return b != nil, diags
 }
 
 type bodyPatchData struct {
@@ -615,6 +602,11 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
+			"auth_ref": schema.StringAttribute{
+				Description:         "Reference to a named_auth entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				MarkdownDescription: "Reference to a `named_auth` entry in the provider configuration. When set, this resource uses the named entry's independent HTTP client (with its own auth transport) instead of the provider's default client.",
+				Optional:            true,
+			},
 			"check_existance": schema.BoolAttribute{
 				Description:         "Whether to check resource already existed? Defaults to `false`.",
 				MarkdownDescription: "Whether to check resource already existed? Defaults to `false`.",
@@ -697,7 +689,20 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 
 func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() {
-		// If the entire plan is null, the resource is planned for destruction.
+		// Resource is planned for destruction.
+		// Persist auth_ref from config to private state so Delete can use it
+		// even if auth_ref is not in the resource state (pre-existing resources).
+		if !req.Config.Raw.IsNull() {
+			var config resourceData
+			if diags := req.Config.Get(ctx, &config); diags.HasError() {
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+			if !config.AuthRef.IsNull() {
+				authRefJSON, _ := json.Marshal(config.AuthRef.ValueString())
+				resp.Diagnostics.Append(resp.Private.SetKey(ctx, "auth_ref", authRefJSON)...)
+			}
+		}
 		return
 	}
 	if req.State.Raw.IsNull() {
@@ -719,6 +724,13 @@ func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReques
 	if diags := req.Config.Get(ctx, &config); diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
+	}
+
+	// Persist auth_ref to private state so Delete can use it during replace operations,
+	// even if auth_ref is not yet in the resource state (pre-existing resources).
+	if !plan.AuthRef.IsNull() {
+		authRefJSON, _ := json.Marshal(plan.AuthRef.ValueString())
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, "auth_ref", authRefJSON)...)
 	}
 
 	defer func() {
@@ -819,15 +831,19 @@ func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest,
 }
 
 func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	c := r.p.client
-	c.SetLoggerContext(ctx)
-
 	var plan resourceData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
 	}
+
+	c, err := r.p.ClientForAuthRef(plan.AuthRef.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	var config resourceData
 	diags = req.Config.Get(ctx, &config)
@@ -849,12 +865,22 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	}
 
 	if plan.CheckExistance.ValueBool() {
+		// For POST-based resources the create path is typically a collection
+		// endpoint (e.g. /variables) that always returns 200. Use read_path
+		// (the specific resource URL) for the existence check when available
+		// and its expansion doesn't require the response body.
+		checkPath := plan.Path.ValueString()
+		if !plan.ReadPath.IsNull() {
+			if expanded, err := exparam.ExpandBodyOrPath(plan.ReadPath.ValueString(), plan.Path.ValueString(), nil); err == nil {
+				checkPath = expanded
+			}
+		}
 		opt, diags := r.p.apiOpt.ForResourceRead(ctx, plan, nil)
 		resp.Diagnostics.Append(diags...)
 		if diags.HasError() {
 			return
 		}
-		response, err := c.Read(ctx, plan.Path.ValueString(), *opt)
+		response, err := c.Read(ctx, checkPath, *opt)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Existance check failed",
@@ -863,10 +889,33 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 			return
 		}
 		if response.StatusCode() != http.StatusNotFound {
-			resp.Diagnostics.AddError(
-				"Resource already exists",
-				fmt.Sprintf("A resource with the ID %q already exists - to be managed via Terraform this resource needs to be imported into the State. Please see the resource documentation for %q for more information.", plan.Path.ValueString(), `rest_resource`),
-			)
+			// Resource already exists — adopt it into state instead of
+			// creating a duplicate. Set the resource ID and run the Read
+			// path to populate state from the existing resource.
+			resourceId := checkPath
+			plan.ID = types.StringValue(resourceId)
+			plan.Output = types.DynamicNull()
+			plan.SensitiveOutput = types.DynamicNull()
+			diags = resp.State.Set(ctx, plan)
+			resp.Diagnostics.Append(diags...)
+			if diags.HasError() {
+				return
+			}
+			rreq := resource.ReadRequest{
+				State:        resp.State,
+				Private:      resp.Private,
+				Identity:     req.Identity,
+				ProviderMeta: req.ProviderMeta,
+			}
+			rresp := resource.ReadResponse{
+				State:       resp.State,
+				Diagnostics: resp.Diagnostics,
+				Identity:    resp.Identity,
+			}
+			r.read(ctx, rreq, &rresp, true)
+			resp.State = rresp.State
+			resp.Diagnostics = rresp.Diagnostics
+			resp.Identity = rresp.Identity
 			return
 		}
 	}
@@ -922,7 +971,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	if !response.IsSuccess() {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Create API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}
@@ -970,23 +1019,6 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
-	}
-
-	// Persist or clear ephemeral_header flag in private state for Read
-	if !config.EphemeralHeader.IsNull() && !config.EphemeralHeader.IsUnknown() {
-		diags = setEphemeralHeaderFlag(ctx, resp.Private)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
-	} else if resp.Private != nil {
-		// Clear the flag when ephemeral_header is no longer used,
-		// so Read preserves the regular header attribute in state.
-		diags = resp.Private.SetKey(ctx, pkEphemeralHeader, nil)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
 	}
 
 	// For LRO, wait for completion
@@ -1046,7 +1078,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 		if !response.IsSuccess() {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Post-create read API returns %d", response.StatusCode()),
-				string(response.Body()),
+				apiErrorDetail(response),
 			)
 			return
 		}
@@ -1110,6 +1142,12 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 		return
 	}
 
+	// Persist auth_ref to private state for future destroy operations.
+	if !plan.AuthRef.IsNull() {
+		authRefJSON, _ := json.Marshal(plan.AuthRef.ValueString())
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, "auth_ref", authRefJSON)...)
+	}
+
 	rreq := resource.ReadRequest{
 		State:        resp.State,
 		Private:      resp.Private,
@@ -1129,13 +1167,10 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 }
 
 func (r Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	r.p.client.SetLoggerContext(ctx)
 	r.read(ctx, req, resp, true)
 }
 
 func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, updateBody bool) {
-	c := r.p.client
-
 	var state resourceData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -1143,26 +1178,12 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 		return
 	}
 
-	// Track whether this resource uses ephemeral_header or had a stale resource-level header.
-	// These resources may fail during Read if the token expired or targets another tenant.
-	hasEphemeralFlag := false
-	hadStaleHeader := !state.Header.IsNull()
-	if req.Private != nil {
-		var flagDiags diag.Diagnostics
-		hasEphemeralFlag, flagDiags = hasEphemeralHeaderFlag(ctx, req.Private)
-		resp.Diagnostics.Append(flagDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	c, err := r.p.ClientForAuthRef(state.AuthRef.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
 	}
-
-	// If the resource uses ephemeral_header, clear the (potentially stale)
-	// state header so the provider-level header (always fresh from config)
-	// is used as the base for the API call. Don't clear for resources that
-	// use the regular "header" attribute — they rely on it for auth.
-	if hasEphemeralFlag {
-		state.Header = types.MapNull(types.StringType)
-	}
+	c.SetLoggerContext(ctx)
 
 	if updateBody {
 		tflog.Info(ctx, "Read a resource", map[string]interface{}{"id": state.ID.ValueString()})
@@ -1192,68 +1213,13 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 		return
 	}
 	if response.StatusCode() == http.StatusNotFound {
-		// If the resource uses cross-tenant auth (had stale header or ephemeral flag),
-		// a 404 might be because the provider-level token targets the wrong tenant
-		// (some APIs return 404 instead of 401/403 for wrong-tenant calls).
-		// In that case, return previous state instead of removing the resource.
-		if hasEphemeralFlag || hadStaleHeader {
-			tflog.Info(ctx, "Read returned 404 for resource with ephemeral/stale header, returning previous state",
-				map[string]interface{}{"id": state.ID.ValueString()})
-			if !hasEphemeralFlag {
-				// Only warn when the flag isn't set yet (first time / stale header migration).
-				// Once the ephemeral flag is set, this 404 is expected cross-tenant behavior.
-				resp.Diagnostics.AddWarning(
-					"Read API returned 404 — using previous state",
-					"The resource could not be refreshed (the API returned 404, which may indicate "+
-						"a cross-tenant token mismatch rather than actual deletion). "+
-						"The stale Authorization header has been cleared from state.\n\n"+
-						string(response.Body()),
-				)
-			}
-			if req.Private != nil && !hasEphemeralFlag && hadStaleHeader {
-				diags := setEphemeralHeaderFlag(ctx, resp.Private)
-				resp.Diagnostics.Append(diags...)
-			}
-			diags := resp.State.Set(ctx, state)
-			resp.Diagnostics.Append(diags...)
-			return
-		}
 		resp.State.RemoveResource(ctx)
 		return
 	}
 	if !response.IsSuccess() {
-		// Graceful degradation for 401/403: if the resource uses ephemeral_header
-		// (cross-tenant) or had a stale resource-level header, the provider-level
-		// token might be for the wrong tenant. Return previous state with the stale
-		// header cleared instead of failing. The resource will be properly refreshed
-		// on the next Create/Update when a fresh token is available from config.
-		if (response.StatusCode() == http.StatusUnauthorized || response.StatusCode() == http.StatusForbidden) &&
-			(hasEphemeralFlag || hadStaleHeader) {
-			tflog.Info(ctx, "Read returned 401/403 for resource with ephemeral/stale header, returning previous state",
-				map[string]interface{}{"id": state.ID.ValueString(), "status": response.StatusCode()})
-			if !hasEphemeralFlag {
-				// Only warn when the flag isn't set yet (first time / stale header migration).
-				resp.Diagnostics.AddWarning(
-					fmt.Sprintf("Read API returned %d — using previous state", response.StatusCode()),
-					"The resource could not be refreshed (likely an expired or cross-tenant token). "+
-						"The stale Authorization header has been cleared from state. "+
-						"The resource will be refreshed on the next successful read.\n\n"+
-						string(response.Body()),
-				)
-			}
-			// Persist the ephemeral flag so subsequent Reads also get graceful handling
-			if req.Private != nil && !hasEphemeralFlag && hadStaleHeader {
-				diags := setEphemeralHeaderFlag(ctx, resp.Private)
-				resp.Diagnostics.Append(diags...)
-			}
-			// Write state with header cleared (done earlier) to prevent future stale token usage
-			diags := resp.State.Set(ctx, state)
-			resp.Diagnostics.Append(diags...)
-			return
-		}
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Read API returns %d", response.StatusCode()),
-			string(response.Body()),
+			apiErrorDetail(response),
 		)
 		return
 	}
@@ -1461,9 +1427,6 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 }
 
 func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	c := r.p.client
-	c.SetLoggerContext(ctx)
-
 	var state resourceData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -1484,6 +1447,13 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 	if diags.HasError() {
 		return
 	}
+
+	c, err := r.p.ClientForAuthRef(plan.AuthRef.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	tflog.Info(ctx, "Update a resource", map[string]interface{}{"id": state.ID.ValueString()})
 
@@ -1663,7 +1633,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 		if !response.IsSuccess() {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Update API returns %d", response.StatusCode()),
-				string(response.Body()),
+				apiErrorDetail(response),
 			)
 			return
 		}
@@ -1715,27 +1685,16 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 		return
 	}
 
+	// Persist auth_ref to private state for future destroy operations.
+	if !plan.AuthRef.IsNull() {
+		authRefJSON, _ := json.Marshal(plan.AuthRef.ValueString())
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, "auth_ref", authRefJSON)...)
+	}
+
 	diags = ephemeral.Set(ctx, resp.Private, eb)
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		return
-	}
-
-	// Persist or clear ephemeral_header flag in private state for Read
-	if !config.EphemeralHeader.IsNull() && !config.EphemeralHeader.IsUnknown() {
-		diags = setEphemeralHeaderFlag(ctx, resp.Private)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
-	} else if resp.Private != nil {
-		// Clear the flag when ephemeral_header is no longer used,
-		// so Read preserves the regular header attribute in state.
-		diags = resp.Private.SetKey(ctx, pkEphemeralHeader, nil)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
 	}
 
 	rreq := resource.ReadRequest{
@@ -1757,9 +1716,6 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 }
 
 func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	c := r.p.client
-	c.SetLoggerContext(ctx)
-
 	var state resourceData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -1767,22 +1723,20 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 		return
 	}
 
-	// For Delete, clear stale resource-level header only when the resource
-	// uses ephemeral_header (which provides fresh auth from config each apply).
-	// Write-only attributes like ephemeral_header are NOT available in
-	// DeleteRequest (framework limitation), so for resources using only the
-	// regular "header" attribute, we preserve it from state — it's the best
-	// available auth for the DELETE call.
-	if req.Private != nil {
-		hasFlag, flagDiags := hasEphemeralHeaderFlag(ctx, req.Private)
-		resp.Diagnostics.Append(flagDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if hasFlag {
-			state.Header = types.MapNull(types.StringType)
+	authRef := state.AuthRef.ValueString()
+	if authRef == "" {
+		// Fallback: check private state for auth_ref persisted by ModifyPlan.
+		// Handles pre-existing resources whose state was written before auth_ref existed.
+		if raw, diags := req.Private.GetKey(ctx, "auth_ref"); !diags.HasError() && len(raw) > 0 {
+			json.Unmarshal(raw, &authRef)
 		}
 	}
+	c, err := r.p.ClientForAuthRef(authRef)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
+		return
+	}
+	c.SetLoggerContext(ctx)
 
 	tflog.Info(ctx, "Delete a resource", map[string]interface{}{"id": state.ID.ValueString()})
 
@@ -1886,7 +1840,7 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 		if !retryable {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Delete API returns %d", response.StatusCode()),
-				string(response.Body()),
+				apiErrorDetail(response),
 			)
 			return
 		}

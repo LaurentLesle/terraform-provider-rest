@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -176,18 +178,7 @@ func setRetry(c *resty.Client, opt RetryOption) {
 	c.RetryCount = opt.Count
 	c.RetryWaitTime = opt.WaitTime
 	c.RetryMaxWaitTime = opt.MaxWaitTime
-	c.RetryAfter = func(c *resty.Client, r *resty.Response) (time.Duration, error) {
-		dur := r.Header().Get("Retry-After")
-		if dur == "" {
-			// returning 0 will make the resty retry to using the backoff based on wait time, count and max wait time
-			return 0, nil
-		}
-		d, err := time.ParseDuration(dur + "s")
-		if err != nil {
-			return 0, fmt.Errorf("invalid Retry-After value in the initiated response: %s", dur)
-		}
-		return d, nil
-	}
+	c.RetryAfter = parseRetryAfter
 	c.RetryConditions = []resty.RetryConditionFunc{
 		func(r *resty.Response, err error) bool {
 			if err != nil {
@@ -203,6 +194,47 @@ func setRetry(c *resty.Client, opt RetryOption) {
 			return false
 		},
 	}
+}
+
+// parseRetryAfterValue parses a Retry-After header value per RFC 7231 Section 7.1.3.
+// It handles integer-seconds ("120") and HTTP-date ("Thu, 10 Apr 2026 12:34:56 GMT").
+// Returns (duration, true) on success, or (0, false) for empty/unrecognised values.
+func parseRetryAfterValue(raw string) (time.Duration, bool) {
+	if raw == "" {
+		return 0, false
+	}
+	if secs, err := strconv.ParseInt(raw, 10, 64); err == nil {
+		return time.Duration(secs) * time.Second, true
+	}
+	if t, err := http.ParseTime(raw); err == nil {
+		d := time.Until(t)
+		if d < 0 {
+			d = 0
+		}
+		return d, true
+	}
+	return 0, false
+}
+
+// parseRetryAfter is the resty RetryAfterFunc callback. It delegates to
+// parseRetryAfterValue and adds jitter (up to 10%) to avoid thundering-herd
+// retries when multiple parallel requests receive the same Retry-After value.
+// On an empty or unrecognised value it returns (0, nil) so that resty falls
+// back to jittered exponential backoff — it never returns an error, which
+// would abort all remaining retries.
+func parseRetryAfter(_ *resty.Client, r *resty.Response) (time.Duration, error) {
+	d, ok := parseRetryAfterValue(r.Header().Get("Retry-After"))
+	if !ok {
+		return 0, nil
+	}
+
+	// Add jitter (up to 10%) to spread parallel retries.
+	if d > 0 {
+		jitter := time.Duration(rand.Int63n(int64(d) / 10))
+		d += jitter
+	}
+
+	return d, nil
 }
 
 // SetLoggerContext sets the ctx to the internal resty logger, as the tflog requires the current ctx.
