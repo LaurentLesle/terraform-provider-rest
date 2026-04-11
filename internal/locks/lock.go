@@ -2,48 +2,50 @@ package locks
 
 import (
 	"context"
-	"log"
 	"sync"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type mutexKV struct {
-	lock  sync.Mutex
-	store map[string]*sync.Mutex
+	mu    sync.Mutex
+	store map[string]chan struct{}
 }
 
 func (m *mutexKV) Lock(ctx context.Context, key string) error {
-	log.Printf("[DEBUG] Locking %q", key)
-	l := m.get(key)
-	for locked := false; !locked; {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		locked = l.TryLock()
+	tflog.Debug(ctx, "Locking", map[string]any{"key": key})
+	ch := m.getOrCreate(key)
+	select {
+	case <-ch:
+		tflog.Debug(ctx, "Locked", map[string]any{"key": key})
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	log.Printf("[DEBUG] Locked %q", key)
-	return nil
 }
 
-func (m *mutexKV) Unlock(key string) {
-	log.Printf("[DEBUG] Unlocking %q", key)
-	m.get(key).Unlock()
-	log.Printf("[DEBUG] Unlocked %q", key)
+func (m *mutexKV) Unlock(ctx context.Context, key string) {
+	tflog.Debug(ctx, "Unlocking", map[string]any{"key": key})
+	ch := m.getOrCreate(key)
+	ch <- struct{}{}
+	tflog.Debug(ctx, "Unlocked", map[string]any{"key": key})
 }
 
-func (m *mutexKV) get(key string) *sync.Mutex {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	mutex, ok := m.store[key]
+func (m *mutexKV) getOrCreate(key string) chan struct{} {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	ch, ok := m.store[key]
 	if !ok {
-		mutex = &sync.Mutex{}
-		m.store[key] = mutex
+		ch = make(chan struct{}, 1)
+		ch <- struct{}{} // start unlocked
+		m.store[key] = ch
 	}
-	return mutex
+	return ch
 }
 
 func NewMutexKV() *mutexKV {
 	return &mutexKV{
-		store: make(map[string]*sync.Mutex),
+		store: make(map[string]chan struct{}),
 	}
 }
 
@@ -53,6 +55,6 @@ func Lock(ctx context.Context, key string) error {
 	return monoMutexKV.Lock(ctx, key)
 }
 
-func Unlock(key string) {
-	monoMutexKV.Unlock(key)
+func Unlock(ctx context.Context, key string) {
+	monoMutexKV.Unlock(ctx, key)
 }
