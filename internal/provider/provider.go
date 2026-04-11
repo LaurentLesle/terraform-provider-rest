@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	tffwdocs "github.com/magodo/terraform-plugin-framework-docs"
 )
 
@@ -802,7 +803,7 @@ func (p *Provider) Init(ctx context.Context, config providerConfig) diag.Diagnos
 		if config.BaseURL.IsNull() || config.BaseURL.IsUnknown() {
 			return
 		}
-		client.DebugLog("[DEBUG] Provider.Init: base_url=%s security_is_null=%v", config.BaseURL.ValueString(), config.Security.IsNull())
+		tflog.Debug(ctx, "Provider.Init", map[string]any{"base_url": config.BaseURL.ValueString(), "security_is_null": config.Security.IsNull()})
 		clientOpt := &client.BuildOption{}
 		if cRaw := config.Client; !cRaw.IsNull() {
 			var c clientData
