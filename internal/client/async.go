@@ -117,7 +117,7 @@ func NewPollableForPoll(resp resty.Response, opt PollOption) (*Pollable, error) 
 		var ok bool
 		rawURL, ok = loc.LocateValueInResp(resp)
 		if !ok {
-			return nil, fmt.Errorf("No polling URL found in %s", loc)
+			return nil, fmt.Errorf("no polling URL found in %s", loc)
 		}
 	} else {
 		rawURL = resp.Request.URL
@@ -211,7 +211,7 @@ PollingLoop:
 				time.Sleep(f.DefaultDelay)
 				continue PollingLoop
 			}
-			return fmt.Errorf("No status value found from %s", f.StatusLocator)
+			return fmt.Errorf("no status value found from %s", f.StatusLocator)
 		}
 		// We tolerate case difference here to be pragmatic.
 		if strings.EqualFold(status, f.Status.Success) {
@@ -228,6 +228,6 @@ PollingLoop:
 				continue PollingLoop
 			}
 		}
-		return fmt.Errorf("Unexpected status %q. Full response: %v", status, string(resp.Body()))
+		return fmt.Errorf("unexpected status %q. Full response: %v", status, string(resp.Body()))
 	}
 }

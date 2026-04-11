@@ -53,10 +53,7 @@ func (f *ResolveFunction) Run(ctx context.Context, req function.RunRequest, resp
 	}
 
 	// Strip "ref:" prefix if present
-	path := ref
-	if strings.HasPrefix(path, "ref:") {
-		path = strings.TrimPrefix(path, "ref:")
-	}
+	path := strings.TrimPrefix(ref, "ref:")
 
 	// Parse optional default: path|default_value
 	var defaultVal *string

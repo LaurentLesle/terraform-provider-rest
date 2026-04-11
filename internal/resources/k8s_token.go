@@ -220,13 +220,13 @@ func (r *K8sTokenResource) buildClient(m k8sTokenModel) (*kubernetes.Clientset, 
 	if err != nil {
 		return nil, "", fmt.Errorf("creating temp kubeconfig: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(kubeconfig); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return nil, "", fmt.Errorf("writing kubeconfig: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	config, err := clientcmd.BuildConfigFromFlags("", tmpFile.Name())
 	if err != nil {

@@ -344,9 +344,10 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 				}
 			}
 
-			body := types.DynamicNull()
+			var body types.Dynamic
 			if nullBody := impspec.Body; nullBody != nil {
-				nb, err := dynamic.FromJSONImplied(*nullBody)
+				var nb types.Dynamic
+				nb, err = dynamic.FromJSONImplied(*nullBody)
 				if err != nil {
 					result.Diagnostics = append(result.Diagnostics, diag.NewErrorDiagnostic(
 						"failed to convert the body in import spec to dynamic type",

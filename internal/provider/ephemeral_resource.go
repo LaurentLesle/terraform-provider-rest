@@ -474,7 +474,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 		path, err := exparam.ExpandBodyOrPath(config.RenewPath.ValueString(), config.Path.ValueString(), response.Body())
 		if err != nil {
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("Failed to build the path for renew the resource"),
+				"Failed to build the path for renew the resource",
 				err.Error(),
 			)
 			return
@@ -488,7 +488,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 			renewBodyRaw, err := exparam.ExpandBody(config.RenewBodyRaw.ValueString(), response.Body())
 			if err != nil {
 				resp.Diagnostics.AddError(
-					fmt.Sprintf("Failed to expand the renew_body_raw"),
+					"Failed to expand the renew_body_raw",
 					err.Error(),
 				)
 				return
@@ -496,7 +496,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 			renewBody, err = dynamic.FromJSONImplied([]byte(renewBodyRaw))
 			if err != nil {
 				resp.Diagnostics.AddError(
-					fmt.Sprintf("Failed to convert the expanded renew_body_raw to dynamic"),
+					"Failed to convert the expanded renew_body_raw to dynamic",
 					err.Error(),
 				)
 				return
@@ -535,7 +535,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 		path, err := exparam.ExpandBodyOrPath(config.ClosePath.ValueString(), config.Path.ValueString(), response.Body())
 		if err != nil {
 			resp.Diagnostics.AddError(
-				fmt.Sprintf("Failed to build the path for renew the resource"),
+				"Failed to build the path for renew the resource",
 				err.Error(),
 			)
 		}
@@ -548,7 +548,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 			closeBodyRaw, err := exparam.ExpandBody(config.CloseBodyRaw.ValueString(), response.Body())
 			if err != nil {
 				resp.Diagnostics.AddError(
-					fmt.Sprintf("Failed to expand the close_body_raw"),
+					"Failed to expand the close_body_raw",
 					err.Error(),
 				)
 				return
@@ -556,7 +556,7 @@ func (e *EphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest,
 			closeBody, err = dynamic.FromJSONImplied([]byte(closeBodyRaw))
 			if err != nil {
 				resp.Diagnostics.AddError(
-					fmt.Sprintf("Failed to convert the expanded close_body_raw to dynamic"),
+					"Failed to convert the expanded close_body_raw to dynamic",
 					err.Error(),
 				)
 				return

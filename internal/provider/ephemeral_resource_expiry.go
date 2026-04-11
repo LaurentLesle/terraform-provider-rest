@@ -23,7 +23,7 @@ func GetExpiryTime(typ, loc, unit, ahead string, resp resty.Response) (time.Time
 
 	v, ok := locator.LocateValueInResp(resp)
 	if !ok {
-		return time.Time{}, fmt.Errorf("No expiry value found via %s", loc)
+		return time.Time{}, fmt.Errorf("no expiry value found via %s", loc)
 	}
 
 	var aheadDur time.Duration

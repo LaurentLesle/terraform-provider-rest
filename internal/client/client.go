@@ -240,7 +240,7 @@ func parseRetryAfter(_ *resty.Client, r *resty.Response) (time.Duration, error) 
 // SetLoggerContext sets the ctx to the internal resty logger, as the tflog requires the current ctx.
 // This needs to be called at the start of each CRUD function.
 func (c *Client) SetLoggerContext(ctx context.Context) {
-	c.Client.SetLogger(tflogger{ctx: ctx})
+	c.SetLogger(tflogger{ctx: ctx})
 }
 
 type CreateOption struct {

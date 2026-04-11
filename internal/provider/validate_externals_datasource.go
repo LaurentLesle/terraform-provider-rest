@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -117,6 +116,6 @@ func (d *ValidateExternalsDataSource) Read(ctx context.Context, req datasource.R
 func (d *ValidateExternalsDataSource) Configure(_ context.Context, _ datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if d.provider == nil {
 		resp.Diagnostics.AddError("Provider not configured",
-			fmt.Sprintf("Expected a configured provider, got nil"))
+			"Expected a configured provider, got nil")
 	}
 }

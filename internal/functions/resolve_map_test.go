@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func buildContext(t *testing.T) attr.Value {
 		map[string]attr.Type{
 			"location": types.StringType,
 			"name":     types.StringType,
-			"tags":     tags.Type(nil),
+			"tags":     tags.Type(context.TODO()),
 		},
 		map[string]attr.Value{
 			"location": types.StringValue("westeurope"),
@@ -48,7 +49,7 @@ func buildContext(t *testing.T) attr.Value {
 	}
 
 	externals, diags := types.ObjectValue(
-		map[string]attr.Type{"primary": tenants.Type(nil)},
+		map[string]attr.Type{"primary": tenants.Type(context.TODO())},
 		map[string]attr.Value{"primary": tenants},
 	)
 	if diags.HasError() {
@@ -56,7 +57,7 @@ func buildContext(t *testing.T) attr.Value {
 	}
 
 	groups, diags := types.ObjectValue(
-		map[string]attr.Type{"group1": group1.Type(nil)},
+		map[string]attr.Type{"group1": group1.Type(context.TODO())},
 		map[string]attr.Value{"group1": group1},
 	)
 	if diags.HasError() {
@@ -65,8 +66,8 @@ func buildContext(t *testing.T) attr.Value {
 
 	ctx, diags := types.ObjectValue(
 		map[string]attr.Type{
-			"resource_groups": groups.Type(nil),
-			"azure_tenants":   externals.Type(nil),
+			"resource_groups": groups.Type(context.TODO()),
+			"azure_tenants":   externals.Type(context.TODO()),
 		},
 		map[string]attr.Value{
 			"resource_groups": groups,
@@ -365,7 +366,7 @@ func buildContextWithUnknownTags(t *testing.T) attr.Value {
 		map[string]attr.Type{
 			"location": types.StringType,
 			"name":     types.StringType,
-			"tags":     unknownTags.Type(nil),
+			"tags":     unknownTags.Type(context.TODO()),
 		},
 		map[string]attr.Value{
 			"location": types.StringValue("westeurope"),
@@ -378,7 +379,7 @@ func buildContextWithUnknownTags(t *testing.T) attr.Value {
 	}
 
 	groups, diags := types.ObjectValue(
-		map[string]attr.Type{"group1": group1.Type(nil)},
+		map[string]attr.Type{"group1": group1.Type(context.TODO())},
 		map[string]attr.Value{"group1": group1},
 	)
 	if diags.HasError() {
@@ -386,7 +387,7 @@ func buildContextWithUnknownTags(t *testing.T) attr.Value {
 	}
 
 	ctx, diags := types.ObjectValue(
-		map[string]attr.Type{"resource_groups": groups.Type(nil)},
+		map[string]attr.Type{"resource_groups": groups.Type(context.TODO())},
 		map[string]attr.Value{"resource_groups": groups},
 	)
 	if diags.HasError() {
@@ -526,7 +527,7 @@ func TestResolveSingleRef_EmptyObjectShowsEmptyHint(t *testing.T) {
 	}
 
 	ctx, diags := types.ObjectValue(
-		map[string]attr.Type{"remote_states": emptyRS.Type(nil)},
+		map[string]attr.Type{"remote_states": emptyRS.Type(context.TODO())},
 		map[string]attr.Value{"remote_states": emptyRS},
 	)
 	if diags.HasError() {
@@ -555,7 +556,7 @@ func TestResolveSingleRef_RemoteStatesHint(t *testing.T) {
 	}
 
 	ctx, diags := types.ObjectValue(
-		map[string]attr.Type{"remote_states": emptyRS.Type(nil)},
+		map[string]attr.Type{"remote_states": emptyRS.Type(context.TODO())},
 		map[string]attr.Value{"remote_states": emptyRS},
 	)
 	if diags.HasError() {

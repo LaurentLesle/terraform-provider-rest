@@ -44,7 +44,6 @@ func (d msgraphData) precheck(t *testing.T) {
 	if d.orgDomain == "" {
 		t.Skipf("%q is not specified", RESTFUL_MSGRAPH_ORG_DOMAIN)
 	}
-	return
 }
 
 func newMsGraphData() msgraphData {

@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/dynamicvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfpath "github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
@@ -192,8 +191,8 @@ func resourcePrecheckAttribute(s string, pathIsRequired bool, suffixDesc string,
 					Optional:            true,
 					Validators: []validator.String{
 						stringvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("mutex"),
-							path.MatchRelative().AtParent().AtName("api"),
+							tfpath.MatchRelative().AtParent().AtName("mutex"),
+							tfpath.MatchRelative().AtParent().AtName("api"),
 						),
 					},
 				},
@@ -256,8 +255,8 @@ func resourcePrecheckAttribute(s string, pathIsRequired bool, suffixDesc string,
 					},
 					Validators: []validator.Object{
 						objectvalidator.ExactlyOneOf(
-							path.MatchRelative().AtParent().AtName("api"),
-							path.MatchRelative().AtParent().AtName("mutex"),
+							tfpath.MatchRelative().AtParent().AtName("api"),
+							tfpath.MatchRelative().AtParent().AtName("mutex"),
 						),
 					},
 				},
@@ -403,7 +402,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				Optional:            true,
 				Validators: []validator.Dynamic{
 					dynamicvalidator.ConflictsWith(
-						path.MatchRoot("delete_body_raw"),
+						tfpath.MatchRoot("delete_body_raw"),
 					),
 				},
 			},
@@ -413,7 +412,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(
-						path.MatchRoot("delete_body"),
+						tfpath.MatchRoot("delete_body"),
 					),
 				},
 			},
@@ -433,8 +432,8 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 							Optional:            true,
 							Validators: []validator.String{
 								stringvalidator.ExactlyOneOf(
-									path.MatchRelative().AtParent().AtName("raw_json"),
-									path.MatchRelative().AtParent().AtName("removed"),
+									tfpath.MatchRelative().AtParent().AtName("raw_json"),
+									tfpath.MatchRelative().AtParent().AtName("removed"),
 								),
 							},
 						},
@@ -444,8 +443,8 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 							Validators: []validator.Bool{
 								boolvalidator.Equals(true),
 								boolvalidator.ExactlyOneOf(
-									path.MatchRelative().AtParent().AtName("raw_json"),
-									path.MatchRelative().AtParent().AtName("removed"),
+									tfpath.MatchRelative().AtParent().AtName("raw_json"),
+									tfpath.MatchRelative().AtParent().AtName("removed"),
 								),
 							},
 						},
@@ -1728,7 +1727,7 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 		// Fallback: check private state for auth_ref persisted by ModifyPlan.
 		// Handles pre-existing resources whose state was written before auth_ref existed.
 		if raw, diags := req.Private.GetKey(ctx, "auth_ref"); !diags.HasError() && len(raw) > 0 {
-			json.Unmarshal(raw, &authRef)
+			_ = json.Unmarshal(raw, &authRef)
 		}
 	}
 	c, err := r.p.ClientForAuthRef(authRef)

@@ -24,7 +24,7 @@ func TestEphemeral_CodeServer_basic(t *testing.T) {
 	srv := httptest.NewUnstartedServer(mux)
 
 	mux.HandleFunc("POST /lease", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, _ = w.Write([]byte(`{"foo": "bar"}`))
 	})
 
 	srv.Start()
@@ -55,7 +55,7 @@ func TestEphemeral_CodeServer_complete(t *testing.T) {
 	mux.HandleFunc("POST /lease", func(w http.ResponseWriter, r *http.Request) {
 		leaseCnt++
 		w.Header().Add("expiry", "1")
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, _ = w.Write([]byte(`{"foo": "bar"}`))
 	})
 
 	var updateLeaseCnt int
@@ -108,18 +108,16 @@ func TestEphemeral_CodeServer_HeaderQueryFromBody(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		body, _ = io.ReadAll(r.Body)
-		w.Write(body)
-		return
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("POST /close", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "close_b" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(``))
+			_, _ = w.Write([]byte(``))
 		}
 		if r.URL.Query().Get("type") != "close_b" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 
 	srv.Start()

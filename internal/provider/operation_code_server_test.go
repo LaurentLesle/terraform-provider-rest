@@ -25,7 +25,6 @@ func newCodeServerOperation(url string) codeServerOperation {
 
 func TestOperation_CodeServer_Empty(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		return
 	}))
 
 	addr := "rest_operation.test"
@@ -47,17 +46,15 @@ func TestOperation_CodeServer_idBuilder(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
-			w.Write([]byte(`{"id": 1}`))
-			return
+			_, _ = w.Write([]byte(`{"id": 1}`))
 		case "GET":
 			if !strings.HasSuffix(r.URL.Path, "/1") {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			w.Write([]byte(`{"status": "OK"}`))
-		case "DELETE":
-			return
+			_, _ = w.Write([]byte(`{"status": "OK"}`))
 		}
+
 	}))
 
 	d := newCodeServerOperation(srv.URL)
@@ -83,7 +80,6 @@ func TestOperation_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "operation" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "delete" {
@@ -92,7 +88,6 @@ func TestOperation_CodeServer_HeaderQuery(t *testing.T) {
 		if r.URL.Query().Get("type") != "delete" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	srv.Start()
 	d := newCodeServerOperation(srv.URL)
@@ -123,8 +118,7 @@ func TestOperation_CodeServer_HeaderQueryFromBody(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		body, _ = io.ReadAll(r.Body)
-		w.Write(body)
-		return
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("DELETE /tests/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("type") != "delete_b" {
@@ -133,7 +127,6 @@ func TestOperation_CodeServer_HeaderQueryFromBody(t *testing.T) {
 		if r.URL.Query().Get("type") != "delete_b" {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		return
 	})
 	srv.Start()
 	d := newCodeServerOperation(srv.URL)

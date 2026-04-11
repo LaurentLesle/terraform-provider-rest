@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -142,7 +143,7 @@ func TestMergeWithOutputs_Basic(t *testing.T) {
 	}
 
 	config, diags := types.ObjectValue(
-		map[string]attr.Type{"rg1": rg1Config.Type(nil)},
+		map[string]attr.Type{"rg1": rg1Config.Type(context.TODO())},
 		map[string]attr.Value{"rg1": rg1Config},
 	)
 	if diags.HasError() {
@@ -162,7 +163,7 @@ func TestMergeWithOutputs_Basic(t *testing.T) {
 	}
 
 	outputs, diags := types.ObjectValue(
-		map[string]attr.Type{"rg1": rg1Output.Type(nil)},
+		map[string]attr.Type{"rg1": rg1Output.Type(context.TODO())},
 		map[string]attr.Value{"rg1": rg1Output},
 	)
 	if diags.HasError() {
@@ -194,7 +195,7 @@ func TestMergeWithOutputs_Basic(t *testing.T) {
 			t.Fatalf("key %q: %s", k, d.Errors())
 		}
 		resultAttrs[k] = obj
-		resultTypes[k] = obj.Type(nil)
+		resultTypes[k] = obj.Type(context.TODO())
 	}
 
 	// Verify merge results
