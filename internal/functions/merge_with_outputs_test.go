@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"maps"
 	"context"
 	"testing"
 
@@ -180,9 +181,7 @@ func TestMergeWithOutputs_Basic(t *testing.T) {
 	for k, cfgEntry := range configEntries {
 		merged := extractAttrs(cfgEntry)
 		if outEntry, ok := outputEntries[k]; ok {
-			for outK, outV := range extractAttrs(outEntry) {
-				merged[outK] = outV
-			}
+			maps.Copy(merged, extractAttrs(outEntry))
 		}
 		mergedTypes := make(map[string]attr.Type, len(merged))
 		mergedValues := make(map[string]attr.Value, len(merged))
@@ -266,9 +265,7 @@ func TestMergeWithOutputs_NoMatchingOutput(t *testing.T) {
 
 	merged := extractAttrs(configEntries["key1"])
 	if outEntry, ok := outputEntries["key1"]; ok {
-		for outK, outV := range extractAttrs(outEntry) {
-			merged[outK] = outV
-		}
+		maps.Copy(merged, extractAttrs(outEntry))
 	}
 
 	if s, ok := merged["name"].(types.String); !ok || s.ValueString() != "test" {

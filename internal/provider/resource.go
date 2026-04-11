@@ -851,7 +851,7 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 		return
 	}
 
-	tflog.Info(ctx, "Create a resource", map[string]interface{}{"path": plan.Path.ValueString()})
+	tflog.Info(ctx, "Create a resource", map[string]any{"path": plan.Path.ValueString()})
 
 	// WriteOnly attributes (e.g. ephemeral_header) are only in config, not plan.
 	// Copy them so ForResourceCreate can merge them into request headers.
@@ -1185,7 +1185,7 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 	c.SetLoggerContext(ctx)
 
 	if updateBody {
-		tflog.Info(ctx, "Read a resource", map[string]interface{}{"id": state.ID.ValueString()})
+		tflog.Info(ctx, "Read a resource", map[string]any{"id": state.ID.ValueString()})
 	}
 
 	stateOutput, err := dynamic.ToJSON(r.getOutput(state))
@@ -1399,7 +1399,8 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 			return
 		}
 		if string(nullBody) != "null" {
-			impspec.Body = ToPtr(json.RawMessage(nullBody))
+			impspec.Body = new(json.RawMessage)
+			*impspec.Body = json.RawMessage(nullBody)
 		}
 	}
 	if !state.ReadSelector.IsNull() {
@@ -1454,7 +1455,7 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 	}
 	c.SetLoggerContext(ctx)
 
-	tflog.Info(ctx, "Update a resource", map[string]interface{}{"id": state.ID.ValueString()})
+	tflog.Info(ctx, "Update a resource", map[string]any{"id": state.ID.ValueString()})
 
 	// WriteOnly attributes (e.g. ephemeral_header) are only in config, not plan.
 	plan.EphemeralHeader = config.EphemeralHeader
@@ -1737,7 +1738,7 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 	}
 	c.SetLoggerContext(ctx)
 
-	tflog.Info(ctx, "Delete a resource", map[string]interface{}{"id": state.ID.ValueString()})
+	tflog.Info(ctx, "Delete a resource", map[string]any{"id": state.ID.ValueString()})
 
 	stateOutput, err := dynamic.ToJSON(r.getOutput(state))
 	if err != nil {

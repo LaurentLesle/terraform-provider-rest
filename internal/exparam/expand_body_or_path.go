@@ -27,8 +27,8 @@ func ExpandBodyOrPath(expr string, path string, body []byte) (string, error) {
 		var jp string
 		if match[2] == "body" {
 			jp = "@this"
-		} else if strings.HasPrefix(match[2], "body.") {
-			jp = strings.TrimPrefix(match[2], "body.")
+		} else if after, ok :=strings.CutPrefix(match[2], "body."); ok  {
+			jp = after
 		} else {
 			return "", fmt.Errorf("invalid match: %s", match[0])
 		}
@@ -43,7 +43,7 @@ func ExpandBodyOrPath(expr string, path string, body []byte) (string, error) {
 		if fnames := match[1]; fnames != "" {
 			// If specified any function, remove the default escape function
 			fs = []Func{}
-			for _, fname := range strings.Split(fnames, ".") {
+			for fname := range strings.SplitSeq(fnames, ".") {
 				f, ok := ff[FuncName(fname)]
 				if !ok {
 					return "", fmt.Errorf("unknonw function %q", fname)

@@ -23,8 +23,8 @@ func ExpandBody(expr string, body []byte) (string, error) {
 		var jp string
 		if match[2] == "body" {
 			jp = "@this"
-		} else if strings.HasPrefix(match[2], "body.") {
-			jp = strings.TrimPrefix(match[2], "body.")
+		} else if after, ok :=strings.CutPrefix(match[2], "body."); ok  {
+			jp = after
 		} else {
 			return "", fmt.Errorf("invalid match: %s", match[0])
 		}
@@ -37,7 +37,7 @@ func ExpandBody(expr string, body []byte) (string, error) {
 		// Apply functions if any
 		fs := []Func{}
 		if fnames := match[1]; fnames != "" {
-			for _, fname := range strings.Split(fnames, ".") {
+			for fname := range strings.SplitSeq(fnames, ".") {
 				f, ok := ff[FuncName(fname)]
 				if !ok {
 					return "", fmt.Errorf("unknonw function %q", fname)

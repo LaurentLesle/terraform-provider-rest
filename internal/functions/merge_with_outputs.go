@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"maps"
 	"context"
 	"fmt"
 
@@ -78,9 +79,7 @@ func (f *MergeWithOutputsFunction) Run(ctx context.Context, req function.RunRequ
 		merged := extractAttrs(cfgEntry)
 
 		if outEntry, ok := outputEntries[k]; ok {
-			for outK, outV := range extractAttrs(outEntry) {
-				merged[outK] = outV
-			}
+			maps.Copy(merged, extractAttrs(outEntry))
 		}
 
 		mergedTypes := make(map[string]attr.Type, len(merged))
@@ -132,16 +131,12 @@ func extractAttrs(val attr.Value) map[string]attr.Value {
 	case types.Object:
 		src := v.Attributes()
 		out := make(map[string]attr.Value, len(src))
-		for k, a := range src {
-			out[k] = a
-		}
+		maps.Copy(out, src)
 		return out
 	case types.Map:
 		src := v.Elements()
 		out := make(map[string]attr.Value, len(src))
-		for k, e := range src {
-			out[k] = e
-		}
+		maps.Copy(out, src)
 		return out
 	case types.Dynamic:
 		return extractAttrs(v.UnderlyingValue())

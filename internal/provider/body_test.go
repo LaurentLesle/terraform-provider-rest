@@ -13,7 +13,7 @@ func TestModifyJSON(t *testing.T) {
 		base           string
 		body           string
 		writeOnlyAttrs []string
-		expect         interface{}
+		expect         any
 	}{
 		{
 			name:   "invalid base",
@@ -52,61 +52,61 @@ func TestModifyJSON(t *testing.T) {
 func TestGetUpdatedJSON(t *testing.T) {
 	cases := []struct {
 		name    string
-		oldJSON interface{}
-		newJSON interface{}
-		expect  interface{}
+		oldJSON any
+		newJSON any
+		expect  any
 	}{
 		{
 			name:    "simple object",
-			oldJSON: map[string]interface{}{"a": 1, "b": 2},
-			newJSON: map[string]interface{}{"a": 3, "c": 4},
-			expect:  map[string]interface{}{"a": 3},
+			oldJSON: map[string]any{"a": 1, "b": 2},
+			newJSON: map[string]any{"a": 3, "c": 4},
+			expect:  map[string]any{"a": 3},
 		},
 		{
 			name:    "nested object",
-			oldJSON: map[string]interface{}{"obj": map[string]interface{}{"a": 1, "b": 2, "c": 3}, "z": 2},
-			newJSON: map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4, "d": 5}, "new": 4},
-			expect:  map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4}},
+			oldJSON: map[string]any{"obj": map[string]any{"a": 1, "b": 2, "c": 3}, "z": 2},
+			newJSON: map[string]any{"obj": map[string]any{"a": 3, "b": 4, "d": 5}, "new": 4},
+			expect:  map[string]any{"obj": map[string]any{"a": 3, "b": 4}},
 		},
 		{
 			name:    "simple array",
-			oldJSON: []interface{}{1, 2, 3},
-			newJSON: []interface{}{3, 4, 5},
-			expect:  []interface{}{3, 4, 5},
+			oldJSON: []any{1, 2, 3},
+			newJSON: []any{3, 4, 5},
+			expect:  []any{3, 4, 5},
 		},
 		{
 			name:    "simple array with different size",
-			oldJSON: []interface{}{1, 2, 3},
-			newJSON: []interface{}{3},
-			expect:  []interface{}{3},
+			oldJSON: []any{1, 2, 3},
+			newJSON: []any{3},
+			expect:  []any{3},
 		},
 		{
 			name: "complex array",
-			oldJSON: []interface{}{
-				map[string]interface{}{
+			oldJSON: []any{
+				map[string]any{
 					"a": 1,
 					"b": 2,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"a": 1,
 					"b": 2,
 				},
 			},
-			newJSON: []interface{}{
-				map[string]interface{}{
+			newJSON: []any{
+				map[string]any{
 					"a": 1,
 					"c": 3,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"b": 2,
 					"c": 3,
 				},
 			},
-			expect: []interface{}{
-				map[string]interface{}{
+			expect: []any{
+				map[string]any{
 					"a": 1,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"b": 2,
 				},
 			},
@@ -123,99 +123,99 @@ func TestGetUpdatedJSON(t *testing.T) {
 func TestGetUpdatedJSONForImport(t *testing.T) {
 	cases := []struct {
 		name    string
-		oldJSON interface{}
-		newJSON interface{}
-		expect  interface{}
+		oldJSON any
+		newJSON any
+		expect  any
 	}{
 		{
 			name:    "nil",
 			oldJSON: nil,
-			newJSON: map[string]interface{}{"a": 1},
-			expect:  map[string]interface{}{"a": 1},
+			newJSON: map[string]any{"a": 1},
+			expect:  map[string]any{"a": 1},
 		},
 		{
 			name:    "simple object",
-			oldJSON: map[string]interface{}{"a": nil, "b": nil},
-			newJSON: map[string]interface{}{"a": 3, "c": 4},
-			expect:  map[string]interface{}{"a": 3},
+			oldJSON: map[string]any{"a": nil, "b": nil},
+			newJSON: map[string]any{"a": 3, "c": 4},
+			expect:  map[string]any{"a": 3},
 		},
 		{
 			name:    "nested object",
-			oldJSON: map[string]interface{}{"obj": map[string]interface{}{"a": nil, "b": nil, "c": nil}, "z": nil},
-			newJSON: map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4, "d": 5}, "new": 4},
-			expect:  map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4}},
+			oldJSON: map[string]any{"obj": map[string]any{"a": nil, "b": nil, "c": nil}, "z": nil},
+			newJSON: map[string]any{"obj": map[string]any{"a": 3, "b": 4, "d": 5}, "new": 4},
+			expect:  map[string]any{"obj": map[string]any{"a": 3, "b": 4}},
 		},
 		{
 			name:    "nested object with no child detail",
-			oldJSON: map[string]interface{}{"obj": nil, "z": nil},
-			newJSON: map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4, "d": 5}, "new": 4},
-			expect:  map[string]interface{}{"obj": map[string]interface{}{"a": 3, "b": 4, "d": 5}},
+			oldJSON: map[string]any{"obj": nil, "z": nil},
+			newJSON: map[string]any{"obj": map[string]any{"a": 3, "b": 4, "d": 5}, "new": 4},
+			expect:  map[string]any{"obj": map[string]any{"a": 3, "b": 4, "d": 5}},
 		},
 		{
 			name:    "0 sized array is the same as nil",
-			oldJSON: []interface{}{},
-			newJSON: []interface{}{1, 2, 3},
-			expect:  []interface{}{1, 2, 3},
+			oldJSON: []any{},
+			newJSON: []any{1, 2, 3},
+			expect:  []any{1, 2, 3},
 		},
 		{
 			name:    "0 sized array is also the same as of a single nil element",
-			oldJSON: []interface{}{nil},
-			newJSON: []interface{}{1, 2, 3},
-			expect:  []interface{}{1, 2, 3},
+			oldJSON: []any{nil},
+			newJSON: []any{1, 2, 3},
+			expect:  []any{1, 2, 3},
 		},
 		// TODO
 		{
 			name:    "more than one element in array",
-			oldJSON: []interface{}{nil, nil},
-			newJSON: []interface{}{1, 2, 3},
+			oldJSON: []any{nil, nil},
+			newJSON: []any{1, 2, 3},
 			expect:  errors.New("the length of array should be 1"),
 		},
 		{
 			name: "complex array",
-			oldJSON: []interface{}{
-				map[string]interface{}{
+			oldJSON: []any{
+				map[string]any{
 					"a": 1,
 					"b": 2,
 				},
 			},
-			newJSON: []interface{}{
-				map[string]interface{}{
+			newJSON: []any{
+				map[string]any{
 					"a": 1,
 					"c": 3,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"b": 2,
 					"c": 3,
 				},
 			},
-			expect: []interface{}{
-				map[string]interface{}{
+			expect: []any{
+				map[string]any{
 					"a": 1,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"b": 2,
 				},
 			},
 		},
 		{
 			name: "object nesting complex array",
-			oldJSON: map[string]interface{}{
-				"prop": map[string]interface{}{
-					"foos": []interface{}{
-						map[string]interface{}{
+			oldJSON: map[string]any{
+				"prop": map[string]any{
+					"foos": []any{
+						map[string]any{
 							"a": nil,
 						},
 					},
 				},
 			},
-			newJSON: map[string]interface{}{
-				"prop": map[string]interface{}{
-					"foos": []interface{}{
-						map[string]interface{}{
+			newJSON: map[string]any{
+				"prop": map[string]any{
+					"foos": []any{
+						map[string]any{
 							"a": 0,
 							"b": 0,
 						},
-						map[string]interface{}{
+						map[string]any{
 							"a": 0,
 							"b": 0,
 						},
@@ -223,13 +223,13 @@ func TestGetUpdatedJSONForImport(t *testing.T) {
 					"bar": 0,
 				},
 			},
-			expect: map[string]interface{}{
-				"prop": map[string]interface{}{
-					"foos": []interface{}{
-						map[string]interface{}{
+			expect: map[string]any{
+				"prop": map[string]any{
+					"foos": []any{
+						map[string]any{
 							"a": 0,
 						},
-						map[string]interface{}{
+						map[string]any{
 							"a": 0,
 						},
 					},

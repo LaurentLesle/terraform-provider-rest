@@ -25,7 +25,7 @@ func (stringIsJSON) ValidateString(ctx context.Context, req validator.StringRequ
 		return
 	}
 
-	var v interface{}
+	var v any
 	if err := json.Unmarshal([]byte(str.ValueString()), &v); err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,

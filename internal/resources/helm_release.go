@@ -197,8 +197,8 @@ func helmConfig(settings *cli.EnvSettings, namespace string) (*action.Configurat
 	return cfg, nil
 }
 
-func mergedValues(m *helmReleaseModel) (map[string]interface{}, error) {
-	vals := make(map[string]interface{})
+func mergedValues(m *helmReleaseModel) (map[string]any, error) {
+	vals := make(map[string]any)
 
 	if !m.Values.IsNull() && !m.Values.IsUnknown() && m.Values.ValueString() != "" {
 		if err := json.Unmarshal([]byte(m.Values.ValueString()), &vals); err != nil {
@@ -225,17 +225,17 @@ func mergedValues(m *helmReleaseModel) (map[string]interface{}, error) {
 	return vals, nil
 }
 
-func setNestedValue(m map[string]interface{}, key string, value string) {
+func setNestedValue(m map[string]any, key string, value string) {
 	parts := splitDotPath(key)
 	current := m
 	for i, part := range parts {
 		if i == len(parts)-1 {
 			current[part] = coerceValue(value)
 		} else {
-			if next, ok := current[part].(map[string]interface{}); ok {
+			if next, ok := current[part].(map[string]any); ok {
 				current = next
 			} else {
-				next := make(map[string]interface{})
+				next := make(map[string]any)
 				current[part] = next
 				current = next
 			}
@@ -245,7 +245,7 @@ func setNestedValue(m map[string]interface{}, key string, value string) {
 
 // coerceValue converts string values to their typed equivalents,
 // matching Helm's --set behavior (booleans and numbers).
-func coerceValue(s string) interface{} {
+func coerceValue(s string) any {
 	if s == "true" {
 		return true
 	}

@@ -1,10 +1,11 @@
 package client
 
 import (
+	"maps"
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -22,9 +23,7 @@ type Query url.Values
 
 func (q Query) Clone() Query {
 	m := url.Values{}
-	for k, v := range q {
-		m[k] = v
-	}
+	maps.Copy(m, q)
 	return Query(m)
 }
 
@@ -78,9 +77,7 @@ type Header map[string]string
 
 func (h Header) Clone() Header {
 	nh := Header{}
-	for k, v := range h {
-		nh[k] = v
-	}
+	maps.Copy(nh, h)
 	return nh
 }
 
@@ -207,10 +204,7 @@ func parseRetryAfterValue(raw string) (time.Duration, bool) {
 		return time.Duration(secs) * time.Second, true
 	}
 	if t, err := http.ParseTime(raw); err == nil {
-		d := time.Until(t)
-		if d < 0 {
-			d = 0
-		}
+		d := max(time.Until(t), 0)
 		return d, true
 	}
 	return 0, false
@@ -230,7 +224,7 @@ func parseRetryAfter(_ *resty.Client, r *resty.Response) (time.Duration, error) 
 
 	// Add jitter (up to 10%) to spread parallel retries.
 	if d > 0 {
-		jitter := time.Duration(rand.Int63n(int64(d) / 10))
+		jitter := time.Duration(rand.Int64N(int64(d) / 10))
 		d += jitter
 	}
 

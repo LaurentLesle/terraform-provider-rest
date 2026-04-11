@@ -185,7 +185,7 @@ type OAuth2RefreshTokenOption struct {
 	Scopes       []string
 }
 
-func DebugLog(format string, args ...interface{}) {
+func DebugLog(format string, args ...any) {
 	if os.Getenv("RESTFUL_DEBUG") == "" {
 		return
 	}
@@ -288,7 +288,7 @@ func (s *scopedRefreshTokenSource) Token() (*oauth2.Token, error) {
 		}
 		decoded, err2 := base64.StdEncoding.DecodeString(payload)
 		if err2 == nil {
-			var claims map[string]interface{}
+			var claims map[string]any
 			if json.Unmarshal(decoded, &claims) == nil {
 				DebugLog("[DEBUG] scopedRefreshTokenSource: token aud=%v", claims["aud"])
 			}

@@ -14,12 +14,12 @@ import (
 // If compensateBaseAttrs is set, then any attribute path element only found in the base body will
 // be added up to the result body.
 func ModifyBody(base, body string, compensateBaseAttrs []string) (string, error) {
-	var baseJSON interface{}
+	var baseJSON any
 	if err := json.Unmarshal([]byte(base), &baseJSON); err != nil {
 		return "", fmt.Errorf("unmarshal the base %q: %v", base, err)
 	}
 
-	var bodyJSON interface{}
+	var bodyJSON any
 	if err := json.Unmarshal([]byte(body), &bodyJSON); err != nil {
 		return "", fmt.Errorf("unmarshal the body %q: %v", body, err)
 	}
@@ -41,7 +41,7 @@ func ModifyBody(base, body string, compensateBaseAttrs []string) (string, error)
 	}
 
 	// Remarshal to keep order.
-	var m interface{}
+	var m any
 	if err := json.Unmarshal([]byte(result), &m); err != nil {
 		return "", err
 	}
@@ -49,11 +49,11 @@ func ModifyBody(base, body string, compensateBaseAttrs []string) (string, error)
 	return string(b), err
 }
 
-func getUpdatedJSON(oldJSON, newJSON interface{}) interface{} {
+func getUpdatedJSON(oldJSON, newJSON any) any {
 	switch oldJSON := oldJSON.(type) {
-	case map[string]interface{}:
-		if newJSON, ok := newJSON.(map[string]interface{}); ok {
-			out := map[string]interface{}{}
+	case map[string]any:
+		if newJSON, ok := newJSON.(map[string]any); ok {
+			out := map[string]any{}
 			for k, ov := range oldJSON {
 				if nv, ok := newJSON[k]; ok {
 					out[k] = getUpdatedJSON(ov, nv)
@@ -61,12 +61,12 @@ func getUpdatedJSON(oldJSON, newJSON interface{}) interface{} {
 			}
 			return out
 		}
-	case []interface{}:
-		if newJSON, ok := newJSON.([]interface{}); ok {
+	case []any:
+		if newJSON, ok := newJSON.([]any); ok {
 			if len(newJSON) != len(oldJSON) {
 				return newJSON
 			}
-			out := make([]interface{}, len(newJSON))
+			out := make([]any, len(newJSON))
 			for i := range newJSON {
 				out[i] = getUpdatedJSON(oldJSON[i], newJSON[i])
 			}
@@ -82,11 +82,11 @@ func ModifyBodyForImport(base, body string) (string, error) {
 	if base == "" {
 		return body, nil
 	}
-	var baseJSON interface{}
+	var baseJSON any
 	if err := json.Unmarshal([]byte(base), &baseJSON); err != nil {
 		return "", fmt.Errorf("unmarshal the base %q: %v", base, err)
 	}
-	var bodyJSON interface{}
+	var bodyJSON any
 	if err := json.Unmarshal([]byte(body), &bodyJSON); err != nil {
 		return "", fmt.Errorf("unmarshal the body %q: %v", body, err)
 	}
@@ -98,11 +98,11 @@ func ModifyBodyForImport(base, body string) (string, error) {
 	return string(b), err
 }
 
-func getUpdatedJSONForImport(oldJSON, newJSON interface{}) (interface{}, error) {
+func getUpdatedJSONForImport(oldJSON, newJSON any) (any, error) {
 	switch oldJSON := oldJSON.(type) {
-	case map[string]interface{}:
-		if newJSON, ok := newJSON.(map[string]interface{}); ok {
-			out := map[string]interface{}{}
+	case map[string]any:
+		if newJSON, ok := newJSON.(map[string]any); ok {
+			out := map[string]any{}
 			for k, ov := range oldJSON {
 				if nv, ok := newJSON[k]; ok {
 					var err error
@@ -114,14 +114,14 @@ func getUpdatedJSONForImport(oldJSON, newJSON interface{}) (interface{}, error) 
 			}
 			return out, nil
 		}
-	case []interface{}:
-		if newJSON, ok := newJSON.([]interface{}); ok {
+	case []any:
+		if newJSON, ok := newJSON.([]any); ok {
 			switch len(oldJSON) {
 			case 0:
 				// The same as setting to null, just return the newJSON.
 				return newJSON, nil
 			case 1:
-				out := make([]interface{}, len(newJSON))
+				out := make([]any, len(newJSON))
 				for i := range newJSON {
 					var err error
 					out[i], err = getUpdatedJSONForImport(oldJSON[0], newJSON[i])
@@ -138,8 +138,7 @@ func getUpdatedJSONForImport(oldJSON, newJSON interface{}) (interface{}, error) 
 	return newJSON, nil
 }
 
-type ObjectOrArray interface {
-}
+type ObjectOrArray any
 
 // Given a JSON object, only keep the attributes specified and remove the others.
 func FilterAttrsInJSON(doc string, attrs []string) (string, error) {
@@ -172,8 +171,8 @@ func FilterAttrsInJSON(doc string, attrs []string) (string, error) {
 			continue
 		}
 		switch d := odoc.(type) {
-		case map[string]interface{}:
-			dd, ok := doc.(map[string]interface{})
+		case map[string]any:
+			dd, ok := doc.(map[string]any)
 			if !ok {
 				return "", fmt.Errorf("expect value %v to be a map, but got %T", doc, doc)
 			}
@@ -181,8 +180,8 @@ func FilterAttrsInJSON(doc string, attrs []string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-		case []interface{}:
-			dd, ok := doc.([]interface{})
+		case []any:
+			dd, ok := doc.([]any)
 			if !ok {
 				return "", fmt.Errorf("expect value %v to be an array, but got %T", doc, doc)
 			}
@@ -203,7 +202,7 @@ func FilterAttrsInJSON(doc string, attrs []string) (string, error) {
 
 func filterAttrInJSON(doc any, prefix, path attrpath.AttrPath) (any, error) {
 	if len(path) == 0 {
-		var odoc interface{}
+		var odoc any
 		b, err := json.Marshal(doc)
 		if err != nil {
 			return nil, err
@@ -218,13 +217,13 @@ func filterAttrInJSON(doc any, prefix, path attrpath.AttrPath) (any, error) {
 	prefix = append(prefix, step)
 	remain := path[1:]
 	switch doc := doc.(type) {
-	case []interface{}:
+	case []any:
 		switch step := step.(type) {
 		case attrpath.AttrStepValue:
 			// This must be an splat
 			return nil, fmt.Errorf("%s: expect a splat step, got a value step (%s)", prefix, step)
 		case attrpath.AttrStepSplat:
-			odoc := []interface{}{}
+			odoc := []any{}
 			for i := range doc {
 				indoc, err := filterAttrInJSON(doc[i], prefix, remain)
 				if err != nil {
@@ -236,10 +235,10 @@ func filterAttrInJSON(doc any, prefix, path attrpath.AttrPath) (any, error) {
 		default:
 			return nil, fmt.Errorf("%s: unknown step type %T", prefix, step)
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		switch step := step.(type) {
 		case attrpath.AttrStepValue:
-			odoc := map[string]interface{}{}
+			odoc := map[string]any{}
 			k := string(step)
 			v, ok := doc[k]
 			if !ok {
@@ -261,17 +260,17 @@ func filterAttrInJSON(doc any, prefix, path attrpath.AttrPath) (any, error) {
 	}
 }
 
-func mergeArray(addr string, arr1, arr2 []interface{}) ([]interface{}, error) {
+func mergeArray(addr string, arr1, arr2 []any) ([]any, error) {
 	if len(arr1) != len(arr2) {
 		return nil, fmt.Errorf("%s: length not the same %d != %d", addr, len(arr1), len(arr2))
 	}
-	arr := []interface{}{}
+	arr := []any{}
 	for i := range arr1 {
 		nextaddr := addr + "." + strconv.Itoa(i)
 		e1, e2 := arr1[i], arr2[i]
 		switch e1 := e1.(type) {
-		case map[string]interface{}:
-			e2, ok := e2.(map[string]interface{})
+		case map[string]any:
+			e2, ok := e2.(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("%s: expect value %v to be a map, but got %T", nextaddr, e2, e2)
 			}
@@ -280,8 +279,8 @@ func mergeArray(addr string, arr1, arr2 []interface{}) ([]interface{}, error) {
 				return nil, fmt.Errorf("merging %s: %v", nextaddr, err)
 			}
 			arr = append(arr, e)
-		case []interface{}:
-			e2, ok := e2.([]interface{})
+		case []any:
+			e2, ok := e2.([]any)
 			if !ok {
 				return nil, fmt.Errorf("%s: expect value %v to be an array, but got %T", nextaddr, e2, e2)
 			}
@@ -300,8 +299,8 @@ func mergeArray(addr string, arr1, arr2 []interface{}) ([]interface{}, error) {
 	return arr, nil
 }
 
-func mergeObject(addr string, obj1, obj2 map[string]interface{}) (map[string]interface{}, error) {
-	obj := map[string]interface{}{}
+func mergeObject(addr string, obj1, obj2 map[string]any) (map[string]any, error) {
+	obj := map[string]any{}
 	intersecKey := map[string]bool{}
 	for k1, v1 := range obj1 {
 		if _, ok := obj2[k1]; !ok {
@@ -320,8 +319,8 @@ func mergeObject(addr string, obj1, obj2 map[string]interface{}) (map[string]int
 		v1, v2 := obj1[k], obj2[k]
 		nextaddr := addr + "." + k
 		switch v1 := v1.(type) {
-		case map[string]interface{}:
-			v2, ok := v2.(map[string]interface{})
+		case map[string]any:
+			v2, ok := v2.(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("%s: expect value %v to be a map, but got %T", nextaddr, v2, v2)
 			}
@@ -329,8 +328,8 @@ func mergeObject(addr string, obj1, obj2 map[string]interface{}) (map[string]int
 			if err != nil {
 				return nil, fmt.Errorf("merging %s: %v", nextaddr, err)
 			}
-		case []interface{}:
-			v2, ok := v2.([]interface{})
+		case []any:
+			v2, ok := v2.([]any)
 			if !ok {
 				return nil, fmt.Errorf("%s: expect value %v to be an array, but got %T", nextaddr, v2, v2)
 			}

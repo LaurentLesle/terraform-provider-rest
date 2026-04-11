@@ -13,16 +13,16 @@ func (p AttrPath) String() string {
 	for _, step := range p {
 		switch step := step.(type) {
 		case AttrStepValue:
-			var val string
+			var val strings.Builder
 			for _, c := range step {
 				switch c {
 				case '.', '#', '\\':
-					val += `\` + string(c)
+					val.WriteString(`\` + string(c))
 				default:
-					val += string(c)
+					val.WriteString(string(c))
 				}
 			}
-			ol = append(ol, val)
+			ol = append(ol, val.String())
 		case AttrStepSplat:
 			ol = append(ol, "#")
 		}
