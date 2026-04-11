@@ -8,15 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -185,21 +184,8 @@ type OAuth2RefreshTokenOption struct {
 	Scopes       []string
 }
 
-func DebugLog(format string, args ...any) {
-	if os.Getenv("RESTFUL_DEBUG") == "" {
-		return
-	}
-	f, err := os.OpenFile("/tmp/rest-debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Printf(format, args...)
-		return
-	}
-	defer func() { _ = f.Close() }()
-	_, _ = fmt.Fprintf(f, format+"\n", args...)
-}
-
-func (opt OAuth2RefreshTokenOption) configureClient(_ context.Context, client *resty.Client) error {
-	DebugLog("[DEBUG] OAuth2RefreshTokenOption.configureClient: tokenURL=%s clientID=%s scopes=%v", opt.TokenURL, opt.ClientId, opt.Scopes)
+func (opt OAuth2RefreshTokenOption) configureClient(ctx context.Context, client *resty.Client) error {
+	tflog.Debug(ctx, "OAuth2RefreshTokenOption.configureClient", map[string]any{"tokenURL": opt.TokenURL, "clientID": opt.ClientId, "scopes": opt.Scopes})
 
 	cfg := oauth2.Config{
 		ClientID:     opt.ClientId,
@@ -220,18 +206,18 @@ func (opt OAuth2RefreshTokenOption) configureClient(_ context.Context, client *r
 	// We use background context here when constructing the client since we are building the client during the provider configuration, where the context is used only for that purpose.
 	// Especially, when we use this client, we will set the operation bound context for each request.
 	httpClient := client.GetClient()
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 
 	// Use a custom token source that includes scopes in the refresh request.
 	// The standard oauth2.tokenRefresher does not send scopes during refresh,
 	// which causes Azure AD to return tokens with the wrong audience.
 	ts := &scopedRefreshTokenSource{
-		ctx:          ctx,
+		ctx:          tokenCtx,
 		conf:         &cfg,
 		refreshToken: opt.RefreshToken,
 		tokenType:    opt.TokenType,
 	}
-	*client = *resty.NewWithClient(oauth2.NewClient(ctx, oauth2.ReuseTokenSource(nil, ts)))
+	*client = *resty.NewWithClient(oauth2.NewClient(tokenCtx, oauth2.ReuseTokenSource(nil, ts)))
 	return nil
 }
 
@@ -267,11 +253,11 @@ func (s *scopedRefreshTokenSource) Token() (*oauth2.Token, error) {
 		v.Set("scope", strings.Join(s.conf.Scopes, " "))
 	}
 
-	DebugLog("[DEBUG] scopedRefreshTokenSource: requesting token from %s with scope=%s", s.conf.Endpoint.TokenURL, v.Get("scope"))
+	tflog.Debug(s.ctx, "scopedRefreshTokenSource: requesting token", map[string]any{"tokenURL": s.conf.Endpoint.TokenURL, "scope": v.Get("scope")})
 
 	tk, err := retrieveTokenWithScopes(s.ctx, s.conf.Endpoint.TokenURL, v)
 	if err != nil {
-		DebugLog("[DEBUG] scopedRefreshTokenSource: error: %v", err)
+		tflog.Debug(s.ctx, "scopedRefreshTokenSource: error", map[string]any{"error": err.Error()})
 		return nil, err
 	}
 
@@ -290,12 +276,12 @@ func (s *scopedRefreshTokenSource) Token() (*oauth2.Token, error) {
 		if err2 == nil {
 			var claims map[string]any
 			if json.Unmarshal(decoded, &claims) == nil {
-				DebugLog("[DEBUG] scopedRefreshTokenSource: token aud=%v", claims["aud"])
+				tflog.Debug(s.ctx, "scopedRefreshTokenSource: token audience", map[string]any{"aud": claims["aud"]})
 			}
 		}
 	}
 
-	DebugLog("[DEBUG] scopedRefreshTokenSource: got token type=%s expires=%v", tk.TokenType, tk.Expiry)
+	tflog.Debug(s.ctx, "scopedRefreshTokenSource: got token", map[string]any{"type": tk.TokenType, "expires": tk.Expiry})
 
 	// Update refresh token if the server rotated it
 	if tk.RefreshToken != "" && tk.RefreshToken != s.refreshToken {
