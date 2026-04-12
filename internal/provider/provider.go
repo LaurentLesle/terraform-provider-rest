@@ -107,7 +107,15 @@ type retryData struct {
 type securityData struct {
 	HTTP   types.Object `tfsdk:"http"`
 	OAuth2 types.Object `tfsdk:"oauth2"`
+	OAuth1 types.Object `tfsdk:"oauth1"`
 	APIKey types.Set    `tfsdk:"apikey"`
+}
+
+type oauth1Data struct {
+	ConsumerKey     types.String `tfsdk:"consumer_key"`
+	ConsumerToken   types.String `tfsdk:"consumer_token"`
+	TokenSecret     types.String `tfsdk:"token_secret"`
+	SignatureMethod types.String `tfsdk:"signature_method"`
 }
 
 type httpData struct {
@@ -673,8 +681,48 @@ func (*Provider) Schema(ctx context.Context, req provider.SchemaRequest, resp *p
 							),
 						},
 					},
+				"oauth1": schema.SingleNestedAttribute{
+					Description:         "Configuration for OAuth 1.0 (0-legged) authentication. Used by MAAS.",
+					MarkdownDescription: "Configuration for OAuth 1.0 (0-legged) authentication. Used by MAAS.",
+					Optional:            true,
+					Attributes: map[string]schema.Attribute{
+						"consumer_key": schema.StringAttribute{
+							Description:         "OAuth consumer key (first segment of the MAAS API key).",
+							MarkdownDescription: "OAuth consumer key (first segment of the MAAS API key).",
+							Required:            true,
+							Sensitive:           true,
+						},
+						"consumer_token": schema.StringAttribute{
+							Description:         "OAuth consumer token (second segment of the MAAS API key).",
+							MarkdownDescription: "OAuth consumer token (second segment of the MAAS API key).",
+							Required:            true,
+							Sensitive:           true,
+						},
+						"token_secret": schema.StringAttribute{
+							Description:         "OAuth token secret (third segment of the MAAS API key).",
+							MarkdownDescription: "OAuth token secret (third segment of the MAAS API key).",
+							Required:            true,
+							Sensitive:           true,
+						},
+						"signature_method": schema.StringAttribute{
+							Description:         `OAuth 1.0 signature method. Defaults to "PLAINTEXT". Also accepts "HMAC-SHA1".`,
+							MarkdownDescription: "OAuth 1.0 signature method. Defaults to `\"PLAINTEXT\"`. Also accepts `\"HMAC-SHA1\"`.",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.OneOf("PLAINTEXT", "HMAC-SHA1"),
+							},
+						},
+					},
+					Validators: []validator.Object{
+						objectvalidator.ConflictsWith(
+							path.MatchRoot("security").AtName("http"),
+							path.MatchRoot("security").AtName("apikey"),
+							path.MatchRoot("security").AtName("oauth2"),
+						),
+					},
 				},
 			},
+		},
 			"named_auth": schema.MapNestedAttribute{
 				Description:         "Named authentication configurations. Each entry creates an independent HTTP client with its own auth transport. Resources select an entry via `auth_ref`.",
 				MarkdownDescription: "Named authentication configurations. Each entry creates an independent HTTP client with its own auth transport. Resources select an entry via `auth_ref`.",
@@ -1203,6 +1251,20 @@ func namedAuthSecurityAttributes() map[string]schema.Attribute {
 				},
 			},
 		},
+		"oauth1": schema.SingleNestedAttribute{
+			Description: "Configuration for OAuth 1.0 (0-legged) authentication. Used by MAAS.",
+			Optional:    true,
+			Attributes: map[string]schema.Attribute{
+				"consumer_key":     schema.StringAttribute{Description: "OAuth consumer key (first segment of the MAAS API key).", Required: true, Sensitive: true},
+				"consumer_token":   schema.StringAttribute{Description: "OAuth consumer token (second segment of the MAAS API key).", Required: true, Sensitive: true},
+				"token_secret":     schema.StringAttribute{Description: "OAuth token secret (third segment of the MAAS API key).", Required: true, Sensitive: true},
+				"signature_method": schema.StringAttribute{
+					Description: `OAuth 1.0 signature method. Defaults to "PLAINTEXT". Also accepts "HMAC-SHA1".`,
+					Optional:    true,
+					Validators:  []validator.String{stringvalidator.OneOf("PLAINTEXT", "HMAC-SHA1")},
+				},
+			},
+		},
 	}
 }
 
@@ -1370,6 +1432,21 @@ func populateSecurity(ctx context.Context, secRaw basetypes.ObjectValue) (client
 			}
 			return opt, nil
 		}
+	case !sec.OAuth1.IsNull():
+		var o1 oauth1Data
+		if diags := sec.OAuth1.As(ctx, &o1, basetypes.ObjectAsOptions{}); diags.HasError() {
+			return nil, diags
+		}
+		sm := o1.SignatureMethod.ValueString()
+		if sm == "" {
+			sm = "PLAINTEXT"
+		}
+		return client.OAuth1Option{
+			ConsumerKey:     o1.ConsumerKey.ValueString(),
+			ConsumerToken:   o1.ConsumerToken.ValueString(),
+			TokenSecret:     o1.TokenSecret.ValueString(),
+			SignatureMethod: sm,
+		}, nil
 	}
 	return nil, nil
 }
@@ -1480,6 +1557,21 @@ provider "rest" {
         token_url     = format("https://login.microsoftonline.com/%s/oauth2/v2.0/token", var.tenant_id)
         refresh_token = var.refresh_token
       }
+    }
+  }
+}
+`,
+			},
+			{
+				Header: "OAuth1 (MAAS)",
+				HCL: `
+provider "rest" {
+  base_url = "http://<maas-ip>:5240/MAAS/api/2.0"
+  security = {
+    oauth1 = {
+      consumer_key   = var.maas_consumer_key
+      consumer_token = var.maas_consumer_token
+      token_secret   = var.maas_token_secret
     }
   }
 }
