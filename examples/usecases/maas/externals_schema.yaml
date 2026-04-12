@@ -1,0 +1,40 @@
+# validate_externals schema registry for MAAS resources.
+# Used with: provider::rest::validate_externals(local.externals, yamldecode(file("externals_schema.yaml")))
+#
+# api: maas — resolved to maas_url from provider config, authenticated via maas_api_key (OAuth1 PLAINTEXT)
+# path placeholders map to entry attributes of the same name.
+
+maas_machines:
+  api: maas
+  path: "/machines/{system_id}/"
+  attributes:
+    - system_id
+    - hostname
+    - status_name
+    - zone
+    - pool
+
+maas_subnets:
+  api: maas
+  path: "/subnets/{id}/"
+  attributes:
+    - id
+    - cidr
+    - name
+    - gateway_ip
+
+maas_fabrics:
+  api: maas
+  path: "/fabrics/{id}/"
+  attributes:
+    - id
+    - name
+
+maas_vlans:
+  api: maas
+  path: "/fabrics/{fabric_id}/vlans/{vid}/"
+  attributes:
+    - fabric_id
+    - vid
+    - name
+    - dhcp_on
