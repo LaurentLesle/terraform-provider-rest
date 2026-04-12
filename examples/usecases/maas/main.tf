@@ -1,11 +1,3 @@
-terraform {
-  required_providers {
-    rest = {
-      source = "laurentlesle/rest"
-    }
-  }
-}
-
 # MAAS API uses 0-legged OAuth 1.0 (PLAINTEXT).
 # Split your MAAS API key (consumer_key:consumer_token:token_secret) into three variables,
 # or pass the combined form as maas_api_key for validate_externals.
@@ -21,7 +13,7 @@ provider "rest" {
   }
 
   # Used by provider::rest::validate_externals to verify maas_* references.
-  maas_url    = var.maas_url
+  maas_url     = var.maas_url
   maas_api_key = var.maas_api_key
 }
 
@@ -42,9 +34,10 @@ resource "rest_resource" "fabric" {
 }
 
 # ── VLAN ─────────────────────────────────────────────────────────────────────
-# VLANs belong to a fabric. The path embeds the fabric ID.
+# VLANs belong to a fabric. The create path embeds the fabric ID directly.
+# Form-encoded bodies must be flat, so fabric is passed as a scalar field.
 resource "rest_resource" "vlan" {
-  path      = "/fabrics/$(body.fabric.id)/vlans/"
+  path      = "/fabrics/${rest_resource.fabric.output.id}/vlans/"
   read_path = "/fabrics/${rest_resource.fabric.output.id}/vlans/$(body.id)"
 
   header = {
@@ -52,13 +45,10 @@ resource "rest_resource" "vlan" {
   }
 
   body = {
-    vid  = 100
+    vid  = "100"
     name = "management"
-    mtu  = 1500
-    fabric = {
-      id = rest_resource.fabric.output.id
-    }
-  })
+    mtu  = "1500"
+  }
 
   depends_on = [rest_resource.fabric]
 }
@@ -74,12 +64,12 @@ resource "rest_resource" "subnet" {
   }
 
   body = {
-    cidr       = "192.168.100.0/24"
-    name       = "app-network"
-    gateway_ip = "192.168.100.1"
+    cidr        = "192.168.100.0/24"
+    name        = "app-network"
+    gateway_ip  = "192.168.100.1"
     dns_servers = "8.8.8.8"
-    vlan       = rest_resource.vlan.output.id
-  })
+    vlan        = tostring(rest_resource.vlan.output.id)
+  }
 
   depends_on = [rest_resource.vlan]
 }
