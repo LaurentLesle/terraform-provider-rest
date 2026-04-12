@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	oauth1pkg "github.com/LaurentLesle/terraform-provider-rest/internal/oauth1"
 )
 
 // ProviderTokens holds the API tokens and settings for external resource validation.
@@ -26,6 +27,8 @@ type ProviderTokens struct {
 	ARMTenantTokens map[string]string // tenant_id → ARM token for cross-tenant access
 	GraphToken      string
 	GitHubToken     string
+	MaasURL         string
+	MaasAPIKey      string // consumer_key:consumer_token:token_secret
 	FailOnWarning   bool
 }
 
@@ -210,6 +213,12 @@ func resolveTokens(cp ConfigProvider) *ProviderTokens {
 	if tokens.GitHubToken == "" {
 		tokens.GitHubToken = os.Getenv("TF_VAR_github_token")
 	}
+	if tokens.MaasURL == "" {
+		tokens.MaasURL = os.Getenv("TF_VAR_maas_url")
+	}
+	if tokens.MaasAPIKey == "" {
+		tokens.MaasAPIKey = os.Getenv("TF_VAR_maas_api_key")
+	}
 	if !tokens.FailOnWarning {
 		tokens.FailOnWarning = os.Getenv("TF_VAR_fail_on_warning") == "true"
 	}
@@ -229,6 +238,16 @@ func resolveTokens(cp ConfigProvider) *ProviderTokens {
 // Returns enrichedData, structural errors, and a fatal error string (empty if none).
 func ValidateAndEnrich(underlying attr.Value, registry map[string]attr.Value, tokens *ProviderTokens) (map[string]map[string]map[string]string, []string, string) {
 	client := &http.Client{Timeout: 10 * time.Second}
+
+	// Build a per-call endpoints map so MAAS (self-hosted) can be injected
+	// without mutating the global apiEndpoints.
+	endpoints := make(map[string]apiEndpoint, len(apiEndpoints)+1)
+	for k, v := range apiEndpoints {
+		endpoints[k] = v
+	}
+	if tokens.MaasURL != "" {
+		endpoints["maas"] = apiEndpoint{baseURL: tokens.MaasURL, authScheme: "oauth1"}
+	}
 
 	categories := extractEntries(underlying)
 	var structErrors []string
@@ -386,7 +405,7 @@ func ValidateAndEnrich(underlying attr.Value, registry map[string]attr.Value, to
 						baseAttrs["_warning"] = "no token available for caller_context introspection"
 					}
 				} else {
-					ep, epOK := apiEndpoints[entrySchema.API]
+					ep, epOK := endpoints[entrySchema.API]
 					token := ""
 					if epOK {
 						token = tokenForAPIWithTenant(tokens, entrySchema.API, attrs)
@@ -691,6 +710,8 @@ func tokenForAPI(tokens *ProviderTokens, api string) string {
 		return tokens.GraphToken
 	case "github":
 		return tokens.GitHubToken
+	case "maas":
+		return tokens.MaasAPIKey
 	default:
 		return ""
 	}
@@ -778,9 +799,16 @@ func fetchJSON(client *http.Client, url, scheme, token string) (map[string]any, 
 }
 
 func setAuthHeader(req *http.Request, scheme, token string) {
-	if scheme == "token" {
+	switch scheme {
+	case "token":
 		req.Header.Set("Authorization", "token "+token)
-	} else {
+	case "oauth1":
+		// token is consumer_key:consumer_token:token_secret
+		parts := strings.SplitN(token, ":", 3)
+		if len(parts) == 3 {
+			req.Header.Set("Authorization", oauth1pkg.BuildHeader(parts[0], parts[1], parts[2], oauth1pkg.PLAINTEXT, req.Method, req.URL.String()))
+		}
+	default:
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 }

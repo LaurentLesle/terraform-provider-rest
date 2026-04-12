@@ -54,6 +54,8 @@ type RefConfig struct {
 	ARMTenantTokens map[string]string
 	GraphToken      string
 	GitHubToken     string
+	MaasURL         string
+	MaasAPIKey      string
 	FailOnWarning   bool
 }
 
@@ -78,6 +80,8 @@ type providerConfig struct {
 	ARMTenantTokens types.Map    `tfsdk:"arm_tenant_tokens"`
 	GraphToken      types.String `tfsdk:"graph_token"`
 	GitHubToken     types.String `tfsdk:"github_token"`
+	MaasURL         types.String `tfsdk:"maas_url"`
+	MaasAPIKey      types.String `tfsdk:"maas_api_key"`
 	FailOnWarning   types.Bool   `tfsdk:"fail_on_warning"`
 }
 
@@ -253,6 +257,8 @@ func (p *Provider) GetTokens() *functions.ProviderTokens {
 		ARMTenantTokens: p.refConfig.ARMTenantTokens,
 		GraphToken:      p.refConfig.GraphToken,
 		GitHubToken:     p.refConfig.GitHubToken,
+		MaasURL:         p.refConfig.MaasURL,
+		MaasAPIKey:      p.refConfig.MaasAPIKey,
 		FailOnWarning:   p.refConfig.FailOnWarning,
 	}
 }
@@ -795,6 +801,15 @@ func (*Provider) Schema(ctx context.Context, req provider.SchemaRequest, resp *p
 				Sensitive:   true,
 				Description: "GitHub token for the GitHub API. Used by validate_externals to verify github_* external references.",
 			},
+			"maas_url": schema.StringAttribute{
+				Optional:    true,
+				Description: "Base URL of the MAAS API (e.g. http://maas.example.com:5240/MAAS/api/2.0). Used by validate_externals to verify maas_* external references.",
+			},
+			"maas_api_key": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "MAAS API key in consumer_key:consumer_token:token_secret format. Used by validate_externals for MAAS API authentication.",
+			},
 			"fail_on_warning": schema.BoolAttribute{
 				Optional:    true,
 				Description: "When true, validate_externals raises an error if any API validation produces a warning. Defaults to false.",
@@ -832,6 +847,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 	if !cfg.GitHubToken.IsNull() && !cfg.GitHubToken.IsUnknown() {
 		data.provider.refConfig.GitHubToken = cfg.GitHubToken.ValueString()
+	}
+	if !cfg.MaasURL.IsNull() && !cfg.MaasURL.IsUnknown() {
+		data.provider.refConfig.MaasURL = cfg.MaasURL.ValueString()
+	}
+	if !cfg.MaasAPIKey.IsNull() && !cfg.MaasAPIKey.IsUnknown() {
+		data.provider.refConfig.MaasAPIKey = cfg.MaasAPIKey.ValueString()
 	}
 	if !cfg.FailOnWarning.IsNull() && !cfg.FailOnWarning.IsUnknown() {
 		data.provider.refConfig.FailOnWarning = cfg.FailOnWarning.ValueBool()
