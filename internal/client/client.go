@@ -263,11 +263,21 @@ type CreateOption struct {
 }
 
 func (c *Client) Create(ctx context.Context, path string, body string, opt CreateOption) (*resty.Response, error) {
-	req := c.R().SetContext(ctx).SetBody(body)
+	req := c.R().SetContext(ctx)
 	req.SetQueryParamsFromValues(url.Values(opt.Query))
 	req.SetHeaders(opt.Header)
 	if req.Header.Get("content-type") == "" {
 		req = req.SetHeader("Content-Type", "application/json")
+	}
+	switch req.Header.Get("Content-Type") {
+	case "application/x-www-form-urlencoded":
+		m := map[string]string{}
+		if err := json.Unmarshal([]byte(body), &m); err != nil {
+			return nil, fmt.Errorf("unmarshaling the create body to a map of string: %v", err)
+		}
+		req.SetFormData(m)
+	default:
+		req.SetBody(body)
 	}
 
 	switch opt.Method {
@@ -303,11 +313,21 @@ type UpdateOption struct {
 }
 
 func (c *Client) Update(ctx context.Context, path string, body string, opt UpdateOption) (*resty.Response, error) {
-	req := c.R().SetContext(ctx).SetBody(body)
+	req := c.R().SetContext(ctx)
 	req.SetQueryParamsFromValues(url.Values(opt.Query))
 	req.SetHeaders(opt.Header)
 	if req.Header.Get("content-type") == "" {
 		req = req.SetHeader("Content-Type", "application/json")
+	}
+	switch req.Header.Get("Content-Type") {
+	case "application/x-www-form-urlencoded":
+		m := map[string]string{}
+		if err := json.Unmarshal([]byte(body), &m); err != nil {
+			return nil, fmt.Errorf("unmarshaling the update body to a map of string: %v", err)
+		}
+		req.SetFormData(m)
+	default:
+		req.SetBody(body)
 	}
 
 	switch opt.Method {
