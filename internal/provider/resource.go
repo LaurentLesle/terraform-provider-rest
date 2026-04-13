@@ -13,6 +13,7 @@ import (
 	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
 	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/dynamicvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
@@ -109,6 +110,8 @@ type resourceData struct {
 	UseSensitiveOutput types.Bool    `tfsdk:"use_sensitive_output"`
 	Output             types.Dynamic `tfsdk:"output"`
 	SensitiveOutput    types.Dynamic `tfsdk:"sensitive_output"`
+
+	Retry types.Object `tfsdk:"retry"`
 }
 
 type bodyPatchData struct {
@@ -142,6 +145,12 @@ type precheckDataApi struct {
 type statusDataGo struct {
 	Success string   `tfsdk:"success"`
 	Pending []string `tfsdk:"pending"`
+}
+
+type resourceRetryData struct {
+	ErrorMessageRegex []string    `tfsdk:"error_message_regex"`
+	IntervalSeconds   types.Int64 `tfsdk:"interval_seconds"`
+	MaxAttempts       types.Int64 `tfsdk:"max_attempts"`
 }
 
 type postCreateRead struct {
@@ -631,6 +640,29 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 					boolplanmodifier.RequiresReplace(),
 				},
 			},
+			"retry": schema.SingleNestedAttribute{
+				Description:         "Optional retry configuration. When a Create, Update or Delete call returns a non-success response whose body matches any of the `error_message_regex` patterns, the call is retried after `interval_seconds` seconds, up to `max_attempts` times total.",
+				MarkdownDescription: "Optional retry configuration. When a Create, Update or Delete call returns a non-success response whose body matches any of the `error_message_regex` patterns, the call is retried after `interval_seconds` seconds, up to `max_attempts` times total.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"error_message_regex": schema.ListAttribute{
+						Description:         "A list of regular expression patterns matched against the response body. If any pattern matches, the operation is retried.",
+						MarkdownDescription: "A list of regular expression patterns matched against the response body. If any pattern matches, the operation is retried.",
+						Required:            true,
+						ElementType:         types.StringType,
+					},
+					"interval_seconds": schema.Int64Attribute{
+						Description:         "Seconds to wait between retries. Defaults to 10.",
+						MarkdownDescription: "Seconds to wait between retries. Defaults to 10.",
+						Optional:            true,
+					},
+					"max_attempts": schema.Int64Attribute{
+						Description:         "Maximum number of attempts including the first call. Defaults to 6.",
+						MarkdownDescription: "Maximum number of attempts including the first call. Defaults to 6.",
+						Optional:            true,
+					},
+				},
+			},
 			"output": schema.DynamicAttribute{
 				Description:         "The response body. If `ephemeral_body` get returned by API, it will be removed from `output`. This is only populated when `use_sensitive_output` is false.",
 				MarkdownDescription: "The response body. If `ephemeral_body` get returned by API, it will be removed from `output`. This is only populated when `use_sensitive_output` is false.",
@@ -960,7 +992,19 @@ func (r Resource) Create(ctx context.Context, req resource.CreateRequest, resp *
 	}
 
 	// Create the resource
-	response, err := c.Create(ctx, plan.Path.ValueString(), string(b), *opt)
+	var createRetry *resourceRetryData
+	if !plan.Retry.IsNull() && !plan.Retry.IsUnknown() {
+		var rd resourceRetryData
+		if diags := plan.Retry.As(ctx, &rd, basetypes.ObjectAsOptions{}); !diags.HasError() {
+			createRetry = &rd
+		}
+	}
+	createPath := plan.Path.ValueString()
+	createBody := string(b)
+	createOpt := *opt
+	response, err := callWithRetry(ctx, createRetry, func() (*resty.Response, error) {
+		return c.Create(ctx, createPath, createBody, createOpt)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error to call create",
@@ -1622,7 +1666,19 @@ func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *
 			}
 		}
 
-		response, err := c.Update(ctx, path, string(planBody), *opt)
+		var updateRetry *resourceRetryData
+		if !plan.Retry.IsNull() && !plan.Retry.IsUnknown() {
+			var rd resourceRetryData
+			if diags := plan.Retry.As(ctx, &rd, basetypes.ObjectAsOptions{}); !diags.HasError() {
+				updateRetry = &rd
+			}
+		}
+		updatePath := path
+		updateBody := string(planBody)
+		updateOpt := *opt
+		response, err := callWithRetry(ctx, updateRetry, func() (*resty.Response, error) {
+			return c.Update(ctx, updatePath, updateBody, updateOpt)
+		})
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error to call update",
@@ -1800,7 +1856,19 @@ func (r Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *
 		body = b
 	}
 
-	response, err := c.Delete(ctx, path, body, *opt)
+	var deleteRetry *resourceRetryData
+	if !state.Retry.IsNull() && !state.Retry.IsUnknown() {
+		var rd resourceRetryData
+		if diags := state.Retry.As(ctx, &rd, basetypes.ObjectAsOptions{}); !diags.HasError() {
+			deleteRetry = &rd
+		}
+	}
+	deletePath := path
+	deleteBody := body
+	deleteOpt := *opt
+	response, err := callWithRetry(ctx, deleteRetry, func() (*resty.Response, error) {
+		return c.Delete(ctx, deletePath, deleteBody, deleteOpt)
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error to call delete",
