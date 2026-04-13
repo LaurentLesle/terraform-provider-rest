@@ -102,10 +102,11 @@ func actionPrecheckAttribute(s string, pathIsRequired bool, suffixDesc string, s
 							MarkdownDescription: "The expected status sentinels for each polling state.",
 							Required:            true,
 							Attributes: map[string]schema.Attribute{
-								"success": schema.StringAttribute{
-									Description:         "The expected status sentinel for suceess status.",
-									MarkdownDescription: "The expected status sentinel for suceess status.",
+								"success": schema.ListAttribute{
+									Description:         "The expected status sentinels for success status. Any matching value terminates polling successfully.",
+									MarkdownDescription: "The expected status sentinels for success status. Any matching value terminates polling successfully.",
 									Required:            true,
+									ElementType:         types.StringType,
 								},
 								"pending": schema.ListAttribute{
 									Description:         "The expected status sentinels for pending status.",
@@ -216,10 +217,11 @@ func (a *Action) Schema(ctx context.Context, req action.SchemaRequest, resp *act
 						MarkdownDescription: "The expected status sentinels for each polling state.",
 						Required:            true,
 						Attributes: map[string]schema.Attribute{
-							"success": schema.StringAttribute{
-								Description:         "The expected status sentinel for suceess status.",
-								MarkdownDescription: "The expected status sentinel for suceess status.",
+							"success": schema.ListAttribute{
+								Description:         "The expected status sentinels for success status. Any matching value terminates polling successfully.",
+								MarkdownDescription: "The expected status sentinels for success status. Any matching value terminates polling successfully.",
 								Required:            true,
+								ElementType:         types.StringType,
 							},
 							"pending": schema.ListAttribute{
 								Description:         "The expected status sentinels for pending status.",

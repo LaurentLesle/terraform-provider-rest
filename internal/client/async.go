@@ -67,7 +67,7 @@ func (loc CodeLocator) String() string {
 
 type PollingStatus struct {
 	Pending []string
-	Success string
+	Success []string
 }
 
 type PollOption struct {
@@ -96,7 +96,7 @@ func NewPollableForPoll(resp resty.Response, opt PollOption) (*Pollable, error) 
 		Query:        opt.Query,
 	}
 
-	if opt.Status.Success == "" {
+	if len(opt.Status.Success) == 0 {
 		return nil, fmt.Errorf("Status.Success is required but not set")
 	}
 	p.Status = opt.Status
@@ -146,7 +146,7 @@ func NewPollableForPrecheck(opt PollOption) (*Pollable, error) {
 		Header:       opt.Header,
 	}
 
-	if opt.Status.Success == "" {
+	if len(opt.Status.Success) == 0 {
 		return nil, fmt.Errorf("Status.Success is required but not set")
 	}
 	p.Status = opt.Status
@@ -214,8 +214,10 @@ PollingLoop:
 			return fmt.Errorf("no status value found from %s", f.StatusLocator)
 		}
 		// We tolerate case difference here to be pragmatic.
-		if strings.EqualFold(status, f.Status.Success) {
-			return nil
+		for _, ss := range f.Status.Success {
+			if strings.EqualFold(status, ss) {
+				return nil
+			}
 		}
 
 		for _, ps := range f.Status.Pending {
