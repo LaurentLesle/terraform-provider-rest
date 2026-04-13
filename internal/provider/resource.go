@@ -1177,6 +1177,14 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 		return
 	}
 
+	// Pre-populate resource identity from current state so that early returns
+	// (e.g. 404 → RemoveResource) don't leave it null. The terraform-plugin-
+	// framework checks for non-null identity after Read returns, even when the
+	// resource was removed from state.
+	if resp.Identity != nil {
+		r.setIdentityFromState(ctx, resp, state)
+	}
+
 	c, err := r.p.ClientForAuthRef(state.AuthRef.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to resolve auth_ref", err.Error())
@@ -1432,6 +1440,31 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 		resp.Diagnostics.Append(diags...)
 		return
 	}
+}
+
+// setIdentityFromState builds and sets resource identity from the current state.
+// This is called early in Read so that early-return code paths (404, selector miss)
+// don't leave identity null — the terraform-plugin-framework requires non-null
+// identity whenever IdentitySchema is declared, even when the resource is removed.
+func (r Resource) setIdentityFromState(ctx context.Context, resp *resource.ReadResponse, state resourceData) {
+	impspec := ImportSpec{
+		Id:   state.ID.ValueString(),
+		Path: state.Path.ValueString(),
+	}
+	if !state.Query.IsNull() {
+		q, dd := client.Query{}.TakeOrSelf(ctx, state.Query)
+		if dd.HasError() {
+			return // best-effort; the full identity will be set at end of read
+		}
+		impspec.Query = url.Values(q)
+	}
+	impspecJSON, err := json.Marshal(impspec)
+	if err != nil {
+		return // best-effort
+	}
+	_ = resp.Identity.Set(ctx, resourceIdentityModel{
+		ID: types.StringValue(string(impspecJSON)),
+	})
 }
 
 func (r Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
