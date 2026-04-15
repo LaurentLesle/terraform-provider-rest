@@ -139,7 +139,7 @@ var ResourceSchemaV2 = schema.Schema{
 		"delete_query": schema.MapAttribute{ElementType: types.ListType{ElemType: types.StringType}, Optional: true},
 
 		"header":           schema.MapAttribute{ElementType: types.StringType, Optional: true},
-		"ephemeral_header": schema.MapAttribute{ElementType: types.StringType, Optional: true, WriteOnly: true},
+		"ephemeral_header": schema.DynamicAttribute{Optional: true, WriteOnly: true},
 		"create_header":    schema.MapAttribute{ElementType: types.StringType, Optional: true},
 		"read_header":      schema.MapAttribute{ElementType: types.StringType, Optional: true},
 		"update_header":    schema.MapAttribute{ElementType: types.StringType, Optional: true},
@@ -204,7 +204,7 @@ type ResourceDataV2 struct {
 	DeleteQuery types.Map `tfsdk:"delete_query"`
 
 	Header          types.Map `tfsdk:"header"`
-	EphemeralHeader types.Map `tfsdk:"ephemeral_header"`
+	EphemeralHeader types.Dynamic `tfsdk:"ephemeral_header"`
 	CreateHeader    types.Map `tfsdk:"create_header"`
 	ReadHeader      types.Map `tfsdk:"read_header"`
 	UpdateHeader    types.Map `tfsdk:"update_header"`

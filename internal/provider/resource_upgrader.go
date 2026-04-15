@@ -13,25 +13,10 @@ import (
 	"github.com/LaurentLesle/terraform-provider-rest/internal/provider/migrate"
 )
 
-// v3StatusAttrTypes is the shape of status in V3 state (success = single string).
-var v3StatusAttrTypes = map[string]attr.Type{
-	"success": types.StringType,
-	"pending": types.ListType{ElemType: types.StringType},
-}
-
 // v4StatusAttrTypes is the shape of status in V4 state (success = list of strings).
 var v4StatusAttrTypes = map[string]attr.Type{
 	"success": types.ListType{ElemType: types.StringType},
 	"pending": types.ListType{ElemType: types.StringType},
-}
-
-// v3PollAttrTypes is the full attribute type map for a V3 poll object.
-var v3PollAttrTypes = map[string]attr.Type{
-	"status_locator":    types.StringType,
-	"status":            types.ObjectType{AttrTypes: v3StatusAttrTypes},
-	"url_locator":       types.StringType,
-	"header":            types.MapType{ElemType: types.StringType},
-	"default_delay_sec": types.Int64Type,
 }
 
 // v4PollAttrTypes is the full attribute type map for a V4 poll object.
@@ -39,16 +24,6 @@ var v4PollAttrTypes = map[string]attr.Type{
 	"status_locator":    types.StringType,
 	"status":            types.ObjectType{AttrTypes: v4StatusAttrTypes},
 	"url_locator":       types.StringType,
-	"header":            types.MapType{ElemType: types.StringType},
-	"default_delay_sec": types.Int64Type,
-}
-
-// v3PrecheckApiAttrTypes is the attribute type map for the V3 precheck api object.
-var v3PrecheckApiAttrTypes = map[string]attr.Type{
-	"status_locator":    types.StringType,
-	"status":            types.ObjectType{AttrTypes: v3StatusAttrTypes},
-	"path":              types.StringType,
-	"query":             types.MapType{ElemType: types.ListType{ElemType: types.StringType}},
 	"header":            types.MapType{ElemType: types.StringType},
 	"default_delay_sec": types.Int64Type,
 }
