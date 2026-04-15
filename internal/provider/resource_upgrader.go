@@ -348,6 +348,100 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
 			},
 		},
+		2: {
+			PriorSchema: &migrate.ResourceSchemaV2,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var pd migrate.ResourceDataV2
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &pd)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				// V2 poll/precheck had success as a single string.
+				pollCreate, d := upgradePollV3toV4(ctx, pd.PollCreate)
+				resp.Diagnostics.Append(d...)
+				pollUpdate, d := upgradePollV3toV4(ctx, pd.PollUpdate)
+				resp.Diagnostics.Append(d...)
+				pollDelete, d := upgradePollV3toV4(ctx, pd.PollDelete)
+				resp.Diagnostics.Append(d...)
+				precheckCreate, d := upgradePrecheckV3toV4(ctx, pd.PrecheckCreate)
+				resp.Diagnostics.Append(d...)
+				precheckUpdate, d := upgradePrecheckV3toV4(ctx, pd.PrecheckUpdate)
+				resp.Diagnostics.Append(d...)
+				precheckDelete, d := upgradePrecheckV3toV4(ctx, pd.PrecheckDelete)
+				resp.Diagnostics.Append(d...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				// V2's `retry` block (status_locator/count/wait_in_sec) is incompatible
+				// with V4's regex-based retry — intentionally dropped.
+				// `body_value_case_insensitive` and `ignore_body_changes` have the
+				// same types in V2 and V4 so they are carried forward.
+				upgradedStateData := resourceData{
+					ID:   pd.ID,
+					Path: pd.Path,
+
+					AuthRef: pd.AuthRef,
+
+					BodyValueCaseInsensitive: pd.BodyValueCaseInsensitive,
+					IgnoreBodyChanges:        pd.IgnoreBodyChanges,
+
+					CreateSelector:       pd.CreateSelector,
+					ReadSelector:         pd.ReadSelector,
+					ReadResponseTemplate: pd.ReadResponseTemplate,
+
+					ReadPath:   pd.ReadPath,
+					UpdatePath: pd.UpdatePath,
+					DeletePath: pd.DeletePath,
+
+					CreateMethod: pd.CreateMethod,
+					UpdateMethod: pd.UpdateMethod,
+					DeleteMethod: pd.DeleteMethod,
+
+					Body:              pd.Body,
+					DeleteBody:        pd.DeleteBody,
+					DeleteBodyRaw:     pd.DeleteBodyRaw,
+					UpdateBodyPatches: pd.UpdateBodyPatches,
+
+					PollCreate: pollCreate,
+					PollUpdate: pollUpdate,
+					PollDelete: pollDelete,
+
+					PrecheckCreate: precheckCreate,
+					PrecheckUpdate: precheckUpdate,
+					PrecheckDelete: precheckDelete,
+
+					PostCreateRead: pd.PostCreateRead,
+
+					WriteOnlyAttributes: pd.WriteOnlyAttributes,
+					MergePatchDisabled:  pd.MergePatchDisabled,
+
+					Query:       pd.Query,
+					CreateQuery: pd.CreateQuery,
+					ReadQuery:   pd.ReadQuery,
+					UpdateQuery: pd.UpdateQuery,
+					DeleteQuery: pd.DeleteQuery,
+
+					Header:       pd.Header,
+					CreateHeader: pd.CreateHeader,
+					ReadHeader:   pd.ReadHeader,
+					UpdateHeader: pd.UpdateHeader,
+					DeleteHeader: pd.DeleteHeader,
+
+					CheckExistance: pd.CheckExistance,
+					ForceNewAttrs:  pd.ForceNewAttrs,
+					OutputAttrs:    pd.OutputAttrs,
+
+					UseSensitiveOutput: pd.UseSensitiveOutput,
+					Output:             pd.Output,
+					SensitiveOutput:    pd.SensitiveOutput,
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
+			},
+		},
 		3: {
 			PriorSchema: &migrate.ResourceSchemaV3,
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
