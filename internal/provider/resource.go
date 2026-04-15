@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/LaurentLesle/terraform-provider-rest/internal/client"
+	"github.com/go-resty/resty/v2"
 	"github.com/LaurentLesle/terraform-provider-rest/internal/defaults"
 	"github.com/LaurentLesle/terraform-provider-rest/internal/exparam"
 	myvalidator "github.com/LaurentLesle/terraform-provider-rest/internal/validator"
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/dynamicvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
@@ -84,7 +84,11 @@ type resourceData struct {
 
 	PostCreateRead types.Object `tfsdk:"post_create_read"`
 
-	WriteOnlyAttributes types.List `tfsdk:"write_only_attrs"`
+	Retry types.Object `tfsdk:"retry"`
+
+	WriteOnlyAttributes     types.List `tfsdk:"write_only_attrs"`
+	IgnoreBodyChanges       types.Set  `tfsdk:"ignore_body_changes"`
+	BodyValueCaseInsensitive types.Bool `tfsdk:"body_value_case_insensitive"`
 	MergePatchDisabled  types.Bool `tfsdk:"merge_patch_disabled"`
 
 	Query       types.Map `tfsdk:"query"`
@@ -109,8 +113,6 @@ type resourceData struct {
 	UseSensitiveOutput types.Bool    `tfsdk:"use_sensitive_output"`
 	Output             types.Dynamic `tfsdk:"output"`
 	SensitiveOutput    types.Dynamic `tfsdk:"sensitive_output"`
-
-	Retry types.Object `tfsdk:"retry"`
 }
 
 type bodyPatchData struct {
@@ -339,7 +341,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 	resp.Schema = schema.Schema{
 		Description:         "`rest_resource` manages a rest resource.",
 		MarkdownDescription: "`rest_resource` manages a rest resource.",
-		Version:             2,
+		Version:             3,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:         "The ID of the Resource.",
@@ -539,6 +541,17 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				MarkdownDescription: "A list of paths (in [gjson syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)) to the attributes that are only settable, but won't be read in GET response. Prefer to use `ephemeral_body`.",
 				Optional:            true,
 				ElementType:         types.StringType,
+			},
+			"ignore_body_changes": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "A set of body attribute paths (in gjson syntax) whose values are ignored when detecting drift. The API-returned value at each path is replaced with the last known state value, preventing Terraform from seeing changes to unmanaged properties.",
+				MarkdownDescription: "A set of body attribute paths (in [gjson syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)) whose values are ignored when detecting drift. The API-returned value at each path is replaced with the last known state value, preventing Terraform from seeing changes to unmanaged properties.",
+			},
+			"body_value_case_insensitive": schema.BoolAttribute{
+				Optional:    true,
+				Description: "When true, string values in the body returned by the API are compared case-insensitively against the last known state. If a value differs only in casing, the state value's casing is used. This prevents spurious diffs when APIs normalise casing (e.g. returning \"Standard\" when \"standard\" was configured).",
+				MarkdownDescription: "When true, string values in the body returned by the API are compared case-insensitively against the last known state. If a value differs only in casing, the state value's casing is used. This prevents spurious diffs when APIs normalise casing (e.g. returning `Standard` when `standard` was configured).",
 			},
 			"merge_patch_disabled": schema.BoolAttribute{
 				Description:         "Whether to use a JSON Merge Patch as the request body in the PATCH update? This is only effective when `update_method` is set to `PATCH`. This overrides the `merge_patch_disabled` set in the provider block (defaults to `false`).",
@@ -1346,6 +1359,44 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 			b = []byte(pb)
 		}
 
+		// Lazily compute stateBodyBytes only when needed by ignore_body_changes or
+		// body_value_case_insensitive so we avoid redundant marshaling.
+		needStateBody := (!state.IgnoreBodyChanges.IsNull() && !state.IgnoreBodyChanges.IsUnknown()) ||
+			state.BodyValueCaseInsensitive.ValueBool()
+
+		var stateBodyBytes []byte
+		if needStateBody {
+			stateBodyBytes, err = dynamic.ToJSON(state.Body)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Read failure",
+					fmt.Sprintf("marshal state body for drift helpers: %v", err),
+				)
+				return
+			}
+		}
+
+		// Apply ignore_body_changes: replace API-returned values with state values
+		// for the declared paths so Terraform sees no drift there.
+		if !state.IgnoreBodyChanges.IsNull() && !state.IgnoreBodyChanges.IsUnknown() {
+			var ignorePaths []string
+			diags = state.IgnoreBodyChanges.ElementsAs(ctx, &ignorePaths, false)
+			resp.Diagnostics.Append(diags...)
+			if diags.HasError() {
+				return
+			}
+			b, err = applyIgnoreBodyChanges(b, stateBodyBytes, ignorePaths)
+			if err != nil {
+				resp.Diagnostics.AddError("Read failure", fmt.Sprintf("ignore_body_changes: %v", err))
+				return
+			}
+		}
+
+		// Apply case normalization if requested.
+		if state.BodyValueCaseInsensitive.ValueBool() {
+			b = normalizeBodyCasing(b, stateBodyBytes)
+		}
+
 		var body types.Dynamic
 		if state.Body.IsNull() {
 			body, err = dynamic.FromJSONImplied(b)
@@ -2109,7 +2160,7 @@ resource "rest_resource" "rg" {
   poll_delete = {
     status_locator = "code"
     status = {
-      success = "404"
+      success = ["404"]
       pending = ["202", "200"]
     }
   }
