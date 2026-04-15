@@ -168,6 +168,15 @@ func New(ctx context.Context, baseURL string, opt *BuildOption) (*Client, error)
 	client := resty.NewWithClient(httpClient)
 	client.SetDebug(true)
 
+	// Always wire a baseline retry for transient transport errors (e.g.
+	// HTTP/2 RST_STREAM INTERNAL_ERROR). This fires even when the resource
+	// has no retry block configured, because transport errors arrive before
+	// any response body and cannot be caught by error_message_regex.
+	client.RetryCount = transportRetryCount
+	client.RetryWaitTime = transportRetryWait
+	client.RetryMaxWaitTime = transportRetryMaxWait
+	client.AddRetryCondition(transportRetryCondition)
+
 	if opt.Retry != nil {
 		setRetry(client, *opt.Retry)
 	}
@@ -191,25 +200,28 @@ type RetryOption struct {
 }
 
 func setRetry(c *resty.Client, opt RetryOption) {
-	c.RetryCount = opt.Count
+	// Take the higher of the transport baseline (set unconditionally in New())
+	// and the user-configured count, so both budgets are honoured.
+	if opt.Count > c.RetryCount {
+		c.RetryCount = opt.Count
+	}
 	c.RetryWaitTime = opt.WaitTime
 	c.RetryMaxWaitTime = opt.MaxWaitTime
 	c.RetryAfter = parseRetryAfter
-	c.RetryConditions = []resty.RetryConditionFunc{
-		func(r *resty.Response, err error) bool {
-			if err != nil {
+	// Append rather than replace: the transport-error condition wired in New()
+	// must remain active alongside the user-configured status-code condition.
+	c.AddRetryCondition(func(r *resty.Response, err error) bool {
+		if err != nil {
+			// Transport errors are already handled by transportRetryCondition.
+			return false
+		}
+		for _, ps := range opt.StatusCodes {
+			if r.StatusCode() == int(ps) {
 				return true
 			}
-
-			for _, ps := range opt.StatusCodes {
-				if r.StatusCode() == int(ps) {
-					return true
-				}
-			}
-
-			return false
-		},
-	}
+		}
+		return false
+	})
 }
 
 // parseRetryAfterValue parses a Retry-After header value per RFC 7231 Section 7.1.3.
