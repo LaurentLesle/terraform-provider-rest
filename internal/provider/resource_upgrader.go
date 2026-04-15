@@ -358,23 +358,8 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 					return
 				}
 
-				// V2 poll/precheck had success as a single string.
-				pollCreate, d := upgradePollV3toV4(ctx, pd.PollCreate)
-				resp.Diagnostics.Append(d...)
-				pollUpdate, d := upgradePollV3toV4(ctx, pd.PollUpdate)
-				resp.Diagnostics.Append(d...)
-				pollDelete, d := upgradePollV3toV4(ctx, pd.PollDelete)
-				resp.Diagnostics.Append(d...)
-				precheckCreate, d := upgradePrecheckV3toV4(ctx, pd.PrecheckCreate)
-				resp.Diagnostics.Append(d...)
-				precheckUpdate, d := upgradePrecheckV3toV4(ctx, pd.PrecheckUpdate)
-				resp.Diagnostics.Append(d...)
-				precheckDelete, d := upgradePrecheckV3toV4(ctx, pd.PrecheckDelete)
-				resp.Diagnostics.Append(d...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-
+				// V2 state already stored success as a list (same as V4), so no
+				// string→list conversion is needed for poll/precheck.
 				// V2's `retry` block (status_locator/count/wait_in_sec) is incompatible
 				// with V4's regex-based retry — intentionally dropped.
 				// `body_value_case_insensitive` and `ignore_body_changes` have the
@@ -405,13 +390,13 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 					DeleteBodyRaw:     pd.DeleteBodyRaw,
 					UpdateBodyPatches: pd.UpdateBodyPatches,
 
-					PollCreate: pollCreate,
-					PollUpdate: pollUpdate,
-					PollDelete: pollDelete,
+					PollCreate: pd.PollCreate,
+					PollUpdate: pd.PollUpdate,
+					PollDelete: pd.PollDelete,
 
-					PrecheckCreate: precheckCreate,
-					PrecheckUpdate: precheckUpdate,
-					PrecheckDelete: precheckDelete,
+					PrecheckCreate: pd.PrecheckCreate,
+					PrecheckUpdate: pd.PrecheckUpdate,
+					PrecheckDelete: pd.PrecheckDelete,
 
 					PostCreateRead: pd.PostCreateRead,
 

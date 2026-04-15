@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// pollAttributeV2 — success is still a StringAttribute (as it was in the V2 era)
+// pollAttributeV2 — V2 state stored success as a ListAttribute (same as V4).
 func pollAttributeV2() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional: true,
@@ -14,7 +14,7 @@ func pollAttributeV2() schema.SingleNestedAttribute {
 			"status": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"success": schema.StringAttribute{Required: true},
+					"success": schema.ListAttribute{Required: true, ElementType: types.StringType},
 					"pending": schema.ListAttribute{Optional: true, ElementType: types.StringType},
 				},
 			},
@@ -38,7 +38,7 @@ func precheckAttributeV2(pathIsRequired bool) schema.ListNestedAttribute {
 						"status": schema.SingleNestedAttribute{
 							Required: true,
 							Attributes: map[string]schema.Attribute{
-								"success": schema.StringAttribute{Required: true},
+								"success": schema.ListAttribute{Required: true, ElementType: types.StringType},
 								"pending": schema.ListAttribute{Optional: true, ElementType: types.StringType},
 							},
 						},
@@ -61,7 +61,7 @@ func retryAttributeV2() schema.SingleNestedAttribute {
 			"status": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"success": schema.StringAttribute{Required: true},
+					"success": schema.ListAttribute{Required: true, ElementType: types.StringType},
 					"pending": schema.ListAttribute{Optional: true, ElementType: types.StringType},
 				},
 			},
