@@ -341,7 +341,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 	resp.Schema = schema.Schema{
 		Description:         "`rest_resource` manages a rest resource.",
 		MarkdownDescription: "`rest_resource` manages a rest resource.",
-		Version:             3,
+		Version:             4,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:         "The ID of the Resource.",
