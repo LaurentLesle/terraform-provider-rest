@@ -319,6 +319,7 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 					PollCreate:          pollCreate,
 					PollUpdate:          pollUpdate,
 					PollDelete:          pollDelete,
+					EphemeralHeader:     types.MapNull(types.StringType),
 					WriteOnlyAttributes: pd.WriteOnlyAttributes,
 					MergePatchDisabled:  pd.MergePatchDisabled,
 					Query:               pd.Query,
@@ -391,6 +392,7 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 
 					PostCreateRead: pd.PostCreateRead,
 
+					EphemeralHeader:     types.MapNull(types.StringType),
 					WriteOnlyAttributes: pd.WriteOnlyAttributes,
 					MergePatchDisabled:  pd.MergePatchDisabled,
 
@@ -486,6 +488,7 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 
 					PostCreateRead: pd.PostCreateRead,
 
+					EphemeralHeader:     types.MapNull(types.StringType),
 					WriteOnlyAttributes: pd.WriteOnlyAttributes,
 					MergePatchDisabled:  pd.MergePatchDisabled,
 
