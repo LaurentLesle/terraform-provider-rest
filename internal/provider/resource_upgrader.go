@@ -38,6 +38,15 @@ var v4PrecheckApiAttrTypes = map[string]attr.Type{
 	"default_delay_sec": types.Int64Type,
 }
 
+// v4RetryAttrTypes is the attribute type map for the V4 retry object.
+// Null retry values in upgraded state must use this typed null to avoid
+// tftypes.Object[] mismatch errors against the V4 schema.
+var v4RetryAttrTypes = map[string]attr.Type{
+	"error_message_regex": types.ListType{ElemType: types.StringType},
+	"interval_seconds":    types.Int64Type,
+	"max_attempts":        types.Int64Type,
+}
+
 // upgradePollV3toV4 converts a V3 poll object (success=string) to a V4 poll
 // object (success=[]string). Null/unknown objects pass through unchanged.
 func upgradePollV3toV4(ctx context.Context, poll types.Object) (types.Object, diag.Diagnostics) {
@@ -318,6 +327,11 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 					ForceNewAttrs:       pd.ForceNewAttrs,
 					OutputAttrs:         pd.OutputAttrs,
 					Output:              pd.Output,
+					// V4-only composite fields absent in V1 state must use properly-typed
+					// nulls — zero-value types.Object{}/types.Set{} produce tftypes.Object[]
+					// / tftypes.Set[DynamicPseudoType] which fail V4 schema validation.
+					Retry:             types.ObjectNull(v4RetryAttrTypes),
+					IgnoreBodyChanges: types.SetNull(types.StringType),
 				}
 
 				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
@@ -336,9 +350,10 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 				// V2 state already stored success as a list (same as V4), so no
 				// string→list conversion is needed for poll/precheck.
 				// V2's `retry` block (status_locator/count/wait_in_sec) is incompatible
-				// with V4's regex-based retry — intentionally dropped.
-				// `body_value_case_insensitive` and `ignore_body_changes` have the
-				// same types in V2 and V4 so they are carried forward.
+				// with V4's regex-based retry — replaced with a properly-typed null so
+				// V4 schema validation passes (zero-value types.Object{} fails).
+				// `body_value_case_insensitive` and `ignore_body_changes` are carried
+				// forward directly since their types match V4.
 				upgradedStateData := resourceData{
 					ID:   pd.ID,
 					Path: pd.Path,
@@ -347,6 +362,7 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 
 					BodyValueCaseInsensitive: pd.BodyValueCaseInsensitive,
 					IgnoreBodyChanges:        pd.IgnoreBodyChanges,
+					Retry:                    types.ObjectNull(v4RetryAttrTypes),
 
 					CreateSelector:       pd.CreateSelector,
 					ReadSelector:         pd.ReadSelector,
@@ -431,13 +447,17 @@ func (r *Resource) UpgradeState(context.Context) map[int64]resource.StateUpgrade
 				}
 
 				// New optional fields (retry, ignore_body_changes, body_value_case_insensitive)
-				// are not present in V3 state — they default to null, which is correct for
-				// Optional attributes.
+				// are not present in V3 state. Use properly-typed nulls — zero-value
+				// types.Object{}/types.Set{} produce tftypes.Object[]/tftypes.Set[Dynamic]
+				// which fail V4 schema validation.
 				upgradedStateData := resourceData{
 					ID:   pd.ID,
 					Path: pd.Path,
 
 					AuthRef: pd.AuthRef,
+
+					Retry:             types.ObjectNull(v4RetryAttrTypes),
+					IgnoreBodyChanges: types.SetNull(types.StringType),
 
 					CreateSelector:       pd.CreateSelector,
 					ReadSelector:         pd.ReadSelector,
