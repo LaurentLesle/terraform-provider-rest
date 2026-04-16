@@ -33,6 +33,56 @@ func TestModifyJSON(t *testing.T) {
 			writeOnlyAttrs: []string{"obj.b"},
 			expect:         `{"obj":{"a":3,"b":2}}`,
 		},
+		{
+			// Regression: Azure Firewall ipConfigurations — ARM returns computed sub-fields
+			// (id, etag, properties.privateIPAddress, properties.provisioningState) that are
+			// not in the plan body. ModifyBody must strip those to prevent
+			// "Provider produced inconsistent result after apply: ipConfigurations: tuple required".
+			name: "tuple element ARM computed sub-fields stripped",
+			base: `{
+				"location": "westeurope",
+				"properties": {
+					"sku": {"name": "AZFW_VNet", "tier": "Standard"},
+					"ipConfigurations": [
+						{
+							"name": "ipconfig-egress",
+							"properties": {
+								"subnet": {"id": "/sub/rg/subnets/AzureFirewallSubnet"},
+								"publicIPAddress": {"id": "/sub/rg/publicIPAddresses/pip-fw"}
+							}
+						}
+					]
+				}
+			}`,
+			body: `{
+				"id": "/sub/rg/azureFirewalls/fw-egress",
+				"name": "fw-egress",
+				"etag": "W/\"abc\"",
+				"type": "Microsoft.Network/azureFirewalls",
+				"location": "westeurope",
+				"properties": {
+					"provisioningState": "Succeeded",
+					"sku": {"name": "AZFW_VNet", "tier": "Standard"},
+					"ipConfigurations": [
+						{
+							"name": "ipconfig-egress",
+							"id": "/sub/rg/azureFirewalls/fw-egress/azureFirewallIpConfigurations/ipconfig-egress",
+							"etag": "W/\"def\"",
+							"properties": {
+								"privateIPAddress": "10.200.0.68",
+								"privateIPAllocationMethod": "Dynamic",
+								"provisioningState": "Succeeded",
+								"subnet": {"id": "/sub/rg/subnets/AzureFirewallSubnet"},
+								"publicIPAddress": {"id": "/sub/rg/publicIPAddresses/pip-fw"}
+							}
+						}
+					]
+				}
+			}`,
+			writeOnlyAttrs: nil,
+			// Keys are re-sorted alphabetically by json.Marshal(map) in ModifyBody.
+			expect: `{"location":"westeurope","properties":{"ipConfigurations":[{"name":"ipconfig-egress","properties":{"publicIPAddress":{"id":"/sub/rg/publicIPAddresses/pip-fw"},"subnet":{"id":"/sub/rg/subnets/AzureFirewallSubnet"}}}],"sku":{"name":"AZFW_VNet","tier":"Standard"}}}`,
+		},
 	}
 
 	for _, tt := range cases {
