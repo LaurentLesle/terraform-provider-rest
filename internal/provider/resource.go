@@ -1397,17 +1397,36 @@ func (r Resource) read(ctx context.Context, req resource.ReadRequest, resp *reso
 			b = normalizeBodyCasing(b, stateBodyBytes)
 		}
 
+		// Strip ARM-only fields before parsing the body against the plan schema.
+		// When ARM returns computed sub-fields inside tuple elements (e.g. an
+		// ipConfigurations entry with id, etag, privateIPAddress, provisioningState
+		// that were not sent in the plan body), FromJSON either fails on a size
+		// mismatch or the FromJSONImplied fallback produces an ObjectValue where the
+		// plan expected a MapValue — causing Terraform to raise "Provider produced
+		// inconsistent result after apply: attribute X: tuple required".
+		// Restricting the response to only fields present in the plan body ensures
+		// the parsed value type is structurally identical to what was planned.
+		// The original full-ARM response (b) is kept for output_attrs below.
+		bForBody := b
+		if !state.Body.IsNull() {
+			if planBodyJSON, pErr := dynamic.ToJSON(state.Body); pErr == nil {
+				if stripped, sErr := ModifyBody(string(planBodyJSON), string(b), nil); sErr == nil {
+					bForBody = []byte(stripped)
+				}
+			}
+		}
+
 		var body types.Dynamic
 		if state.Body.IsNull() {
 			body, err = dynamic.FromJSONImplied(b)
 		} else {
-			body, err = dynamic.FromJSON(b, state.Body.UnderlyingValue().Type(ctx))
+			body, err = dynamic.FromJSON(bForBody, state.Body.UnderlyingValue().Type(ctx))
 		}
 		if err != nil {
 			// An error might occur here during refresh, when the type of the state doesn't match the remote,
 			// e.g. a tuple field has different number of elements.
 			// In this case, we fallback to the implied types, to make the refresh proceed and return a reasonable plan diff.
-			if body, err = dynamic.FromJSONImplied(b); err != nil {
+			if body, err = dynamic.FromJSONImplied(bForBody); err != nil {
 				resp.Diagnostics.AddError(
 					"Evaluating `body` during Read",
 					err.Error(),
